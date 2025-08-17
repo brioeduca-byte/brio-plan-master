@@ -8,6 +8,76 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, ArrowLeft, Upload, BookOpen, Calculator, PenTool, Scroll, Globe, Microscope, CheckCircle } from 'lucide-react';
 
+// Types for the Slack API integration
+interface FeedbackRequest {
+  message: string;
+}
+
+interface SlackApiResponse {
+  success: boolean;
+  error?: string;
+}
+
+const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "http://localhost:3000/api/slack/send-message"
+
+const sendFormToSlack = async (
+  formData: BrioFormData,
+  disciplina: string
+): Promise<SlackApiResponse> => {
+  try {
+    /* ---------- keep the original message structure ---------- */
+    const message =
+      `🎯 # Formulário de Planejamento de Conteúdo!\n\n` +
+      `📚 **Disciplina:** ${disciplina}\n\n` +
+      `📅 **Semana 1:**\n` +
+      `   • Conteúdos: ${formData.semana1.conteudos}\n` +
+      `   • Observações: ${formData.semana1.obs || 'Nenhuma'}\n` +
+      `   • Arquivo: ${formData.semana1.upload ? formData.semana1.upload.name : 'Nenhum'}\n\n` +
+      `📅 **Semana 2:**\n` +
+      `   • Conteúdos: ${formData.semana2.conteudos}\n` +
+      `   • Observações: ${formData.semana2.obs || 'Nenhuma'}\n` +
+      `   • Arquivo: ${formData.semana2.upload ? formData.semana2.upload.name : 'Nenhum'}\n\n` +
+      `📅 **Semana 3:**\n` +
+      `   • Conteúdos: ${formData.semana3.conteudos}\n` +
+      `   • Observações: ${formData.semana3.obs || 'Nenhuma'}\n` +
+      `   • Arquivo: ${formData.semana3.upload ? formData.semana3.upload.name : 'Nenhum'}\n\n` +
+      `📅 **Semana 4:**\n` +
+      `   • Conteúdos: ${formData.semana4.conteudos}\n` +
+      `   • Observações: ${formData.semana4.obs || 'Nenhuma'}\n` +
+      `   • Arquivo: ${formData.semana4.upload ? formData.semana4.upload.name : 'Nenhum'}\n\n` +
+      `📝 **Observações Gerais:** ${formData.observacoes_gerais || 'Nenhuma'}\n\n` +
+      `🚀 **Status:** Formulário de planejamento completo enviado com sucesso!`;
+
+    const payload: FeedbackRequest = { message };
+
+    /* ---------- simple POST, no pre-flight workarounds ---------- */
+    const response = await fetch(SLACK_FEEDBACK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const result: SlackApiResponse = await response.json();
+
+    if (!response.ok) {
+      console.error('API Error:', response.status, result);
+      return {
+        success: false,
+        error: result.error || `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Network or parsing error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro de conexão desconhecido',
+    };
+  }
+};
+
+
 type Discipline = 'matematica' | 'portugues' | 'historia' | 'geografia' | 'ciencias';
 
 interface WeekData {
@@ -16,7 +86,7 @@ interface WeekData {
   obs: string;
 }
 
-interface FormData {
+interface BrioFormData {
   disciplina: Discipline | '';
   semana1: WeekData;
   semana2: WeekData;
@@ -38,7 +108,7 @@ type Step = typeof STEPS[number];
 
 const BrioForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>('inicio');
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<BrioFormData>({
     disciplina: '',
     semana1: { conteudos: '', obs: '' },
     semana2: { conteudos: '', obs: '' },
@@ -46,11 +116,14 @@ const BrioForm: React.FC = () => {
     semana4: { conteudos: '', obs: '' },
     observacoes_gerais: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string>('');
 
   const currentStepIndex = STEPS.indexOf(currentStep);
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
 
-  const updateFormData = useCallback((updates: Partial<FormData>) => {
+  const updateFormData = useCallback((updates: Partial<BrioFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   }, []);
 
@@ -85,6 +158,35 @@ const BrioForm: React.FC = () => {
         return formData.semana4.conteudos.trim() !== '';
       default:
         return true;
+    }
+  };
+
+  const handleFormSubmission = async () => {
+    if (!formData.disciplina) {
+      setSubmitError('Disciplina não selecionada');
+      setSubmitStatus('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+    setSubmitError('');
+
+    try {
+      const result = await sendFormToSlack(formData, formData.disciplina);
+      
+      if (result.success) {
+        setSubmitStatus('success');
+      } else {
+        setSubmitStatus('error');
+        setSubmitError(result.error || 'Erro desconhecido ao enviar formulário');
+      }
+    } catch (error) {
+      setSubmitStatus('error');
+      setSubmitError('Erro ao enviar formulário');
+      console.error('Submission error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -136,7 +238,7 @@ const BrioForm: React.FC = () => {
                 <Button
                   onClick={nextStep}
                   size="lg"
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 glow-cyan animate-pulse-glow"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 glow-cyan"
                 >
                   Começar Planejamento
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -180,9 +282,6 @@ const BrioForm: React.FC = () => {
                           }`}
                         >
                           <RadioGroupItem value={discipline.id} className="sr-only" />
-                          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/20">
-                            <Icon className="w-6 h-6 text-primary" />
-                          </div>
                           <span className="text-lg font-medium text-foreground">
                             {discipline.label}
                           </span>
@@ -349,7 +448,11 @@ const BrioForm: React.FC = () => {
                   Voltar
                 </Button>
                 <Button
-                  onClick={nextStep}
+                  onClick={() => {
+                    setSubmitStatus('idle');
+                    setSubmitError('');
+                    nextStep();
+                  }}
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                   Finalizar Planejamento
@@ -380,24 +483,90 @@ const BrioForm: React.FC = () => {
                   </p>
                 </div>
               </CardHeader>
-              <CardContent className="text-center">
-                <Button
-                  onClick={() => {
-                    setCurrentStep('inicio');
-                    setFormData({
-                      disciplina: '',
-                      semana1: { conteudos: '', obs: '' },
-                      semana2: { conteudos: '', obs: '' },
-                      semana3: { conteudos: '', obs: '' },
-                      semana4: { conteudos: '', obs: '' },
-                      observacoes_gerais: '',
-                    });
-                  }}
-                  size="lg"
-                  className="bg-success text-success-foreground hover:bg-success/90 glow-cyan"
-                >
-                  Criar Novo Planejamento
-                </Button>
+              <CardContent className="text-center space-y-4">
+                {/* Submission Status */}
+                {submitStatus === 'idle' && (
+                  <div className="text-center">
+                    <p className="text-muted-foreground mb-4">
+                      Clique no botão abaixo para enviar seu planejamento para nossa equipe.
+                    </p>
+                    <Button
+                      onClick={handleFormSubmission}
+                      disabled={isSubmitting}
+                      size="lg"
+                      className="bg-accent text-accent-foreground hover:bg-accent/90 glow-cyan"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Enviando...
+                        </>
+                      ) : (
+                        'Enviar Planejamento'
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {submitStatus === 'success' && (
+                  <div className="text-center space-y-4">
+                    <div className="mx-auto w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-green-600">
+                      ✅ Planejamento enviado com sucesso!
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Sua equipe recebeu o planejamento e entrará em contato em breve.
+                    </p>
+                  </div>
+                )}
+
+                {submitStatus === 'error' && (
+                  <div className="text-center space-y-4">
+                    <div className="mx-auto w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-2xl">⚠️</span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-red-600">
+                      ❌ Erro ao enviar planejamento
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      {submitError}
+                    </p>
+                    <Button
+                      onClick={handleFormSubmission}
+                      disabled={isSubmitting}
+                      size="lg"
+                      className="bg-red-500 text-white hover:bg-red-600"
+                    >
+                      Tentar Novamente
+                    </Button>
+                  </div>
+                )}
+
+                {/* Reset Button - only show after successful submission or if user wants to start over */}
+                {(submitStatus === 'success' || submitStatus === 'idle') && (
+                  <Button
+                    onClick={() => {
+                      setCurrentStep('inicio');
+                      setFormData({
+                        disciplina: '',
+                        semana1: { conteudos: '', obs: '' },
+                        semana2: { conteudos: '', obs: '' },
+                        semana3: { conteudos: '', obs: '' },
+                        semana4: { conteudos: '', obs: '' },
+                        observacoes_gerais: '',
+                      });
+                      setSubmitStatus('idle');
+                      setSubmitError('');
+                    }}
+                    variant="outline"
+                    size="lg"
+                    className="mt-4"
+                  >
+                    Criar Novo Planejamento
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
