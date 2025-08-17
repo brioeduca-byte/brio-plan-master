@@ -18,7 +18,7 @@ interface SlackApiResponse {
   error?: string;
 }
 
-const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "http://localhost:3000/api/slack/send-message"
+const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "https://brio-site.vercel.app/api/slack/send-message"
 
 const sendFormToSlack = async (
   formData: BrioFormData,
