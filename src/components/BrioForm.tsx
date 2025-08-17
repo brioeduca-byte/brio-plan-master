@@ -600,31 +600,6 @@ const BrioForm: React.FC = () => {
                     </Button>
                   </div>
                 )}
-
-                {/* Reset Button - only show after successful submission or if user wants to start over */}
-                {(submitStatus === 'success' || submitStatus === 'idle') && (
-                  <Button
-                    onClick={() => {
-                      setCurrentStep('inicio');
-                      setFormData({
-                        nome: '',
-                        disciplina: '',
-                        semana1: { conteudos: '', obs: '' },
-                        semana2: { conteudos: '', obs: '' },
-                        semana3: { conteudos: '', obs: '' },
-                        semana4: { conteudos: '', obs: '' },
-                        observacoes_gerais: '',
-                      });
-                      setSubmitStatus('idle');
-                      setSubmitError('');
-                    }}
-                    variant="outline"
-                    size="lg"
-                    className="mt-4"
-                  >
-                    Criar Novo Planejamento
-                  </Button>
-                )}
               </CardContent>
             </Card>
           </div>
