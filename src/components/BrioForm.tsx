@@ -28,6 +28,7 @@ const sendFormToSlack = async (
     /* ---------- keep the original message structure ---------- */
     const message =
       `🎯 # Formulário de Planejamento de Conteúdo!\n\n` +
+      `👤 **Nome:** ${formData.nome}\n\n` +
       `📚 **Disciplina:** ${disciplina}\n\n` +
       `📅 **Semana 1:**\n` +
       `   • Conteúdos: ${formData.semana1.conteudos}\n` +
@@ -87,6 +88,7 @@ interface WeekData {
 }
 
 interface BrioFormData {
+  nome: string;
   disciplina: Discipline | '';
   semana1: WeekData;
   semana2: WeekData;
@@ -103,12 +105,13 @@ const disciplines = [
   { id: 'ciencias' as const, label: '🔬 Ciências', icon: Microscope },
 ];
 
-const STEPS = ['inicio', 'disciplina', 'semana1', 'semana2', 'semana3', 'semana4', 'observacoes', 'final'] as const;
+const STEPS = ['inicio', 'nome', 'disciplina', 'semana1', 'semana2', 'semana3', 'semana4', 'observacoes', 'final'] as const;
 type Step = typeof STEPS[number];
 
 const BrioForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>('inicio');
   const [formData, setFormData] = useState<BrioFormData>({
+    nome: '',
     disciplina: '',
     semana1: { conteudos: '', obs: '' },
     semana2: { conteudos: '', obs: '' },
@@ -146,6 +149,8 @@ const BrioForm: React.FC = () => {
 
   const canProceed = () => {
     switch (currentStep) {
+      case 'nome':
+        return formData.nome.trim() !== '';
       case 'disciplina':
         return formData.disciplina !== '';
       case 'semana1':
@@ -245,6 +250,58 @@ const BrioForm: React.FC = () => {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case 'nome':
+        return (
+          <div className="min-h-screen bg-gradient-hero relative p-4">
+            <FloatingParticles />
+            <div className="max-w-4xl mx-auto">
+              <div className="mb-8">
+                <Progress value={progress} className="w-full mb-4" />
+                <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-2">
+                  Qual é o seu nome?
+                </h2>
+                <p className="text-center text-muted-foreground">
+                  Como devemos te chamar?
+                </p>
+              </div>
+
+              <Card className="glass animate-fade-in">
+                <CardContent className="p-8">
+                  <div>
+                    <Label htmlFor="nome" className="text-lg font-medium text-foreground mb-3 block">
+                      Nome completo *
+                    </Label>
+                    <Input
+                      id="nome"
+                      type="text"
+                      placeholder="Digite seu nome completo..."
+                      value={formData.nome}
+                      onChange={(e) => updateFormData({ nome: e.target.value })}
+                      className="text-base h-12"
+                      required
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-between mt-8">
+                <Button variant="outline" onClick={prevStep}>
+                  <ArrowLeft className="mr-2 w-4 h-4" />
+                  Voltar
+                </Button>
+                <Button
+                  onClick={nextStep}
+                  disabled={!canProceed()}
+                  className={canProceed() ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}
+                >
+                  Continuar
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         );
 
@@ -550,6 +607,7 @@ const BrioForm: React.FC = () => {
                     onClick={() => {
                       setCurrentStep('inicio');
                       setFormData({
+                        nome: '',
                         disciplina: '',
                         semana1: { conteudos: '', obs: '' },
                         semana2: { conteudos: '', obs: '' },
