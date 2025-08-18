@@ -41,7 +41,7 @@ interface SlackApiResponse {
 }
 
 const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "https://brio-site.vercel.app/api/slack/send-message"
-const GCS_BUCKET_NAME = import.meta.env.VITE_GCS_BUCKET_NAME || "YOUR_BUCKET_NAME"
+const GCS_BUCKET_NAME = import.meta.env.VITE_GCS_BUCKET_NAME || "midia.brioeduca.com"
 
 const sendFormToSlack = async (
   formData: BrioFormData,
@@ -254,7 +254,7 @@ const BrioForm: React.FC = () => {
 
   const uploadFile = async (week: string, file: File) => {
     try {
-      const filename = `${week}_${Date.now()}_${file.name}`;
+      const filename = `mapple-bear/${formData.nome.toLowerCase().replace(/\s+/g, '-')}/${week}_${Date.now()}_${file.name}`;
       
       // Update upload progress
       setUploadProgress(prev => ({ ...prev, [week]: 0 }));
