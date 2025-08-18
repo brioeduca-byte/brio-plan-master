@@ -8,6 +8,28 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, ArrowLeft, Upload, BookOpen, Calculator, PenTool, Scroll, Globe, Microscope, CheckCircle } from 'lucide-react';
 
+// File upload hook
+export function useFileUpload() {
+  return async (filename: string, file: File) => {
+    const res = await fetch('https://brio-site.vercel.app/api/storage/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename }),
+    });
+    const { uploadUrl } = await res.json();
+    const gcsRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+
+    if (!gcsRes.ok) {
+      throw new Error(`Falhou: ${gcsRes.statusText}`);
+    }
+    return true;
+  };
+}
+
 // Types for the Slack API integration
 interface FeedbackRequest {
   message: string;
@@ -19,6 +41,7 @@ interface SlackApiResponse {
 }
 
 const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "https://brio-site.vercel.app/api/slack/send-message"
+const GCS_BUCKET_NAME = import.meta.env.VITE_GCS_BUCKET_NAME || "YOUR_BUCKET_NAME"
 
 const sendFormToSlack = async (
   formData: BrioFormData,
@@ -33,19 +56,23 @@ const sendFormToSlack = async (
       `📅 **Semana 1:**\n` +
       `   • Conteúdos: ${formData.semana1.conteudos}\n` +
       `   • Observações: ${formData.semana1.obs || 'Nenhuma'}\n` +
-      `   • Arquivo: ${formData.semana1.upload ? formData.semana1.upload.name : 'Nenhum'}\n\n` +
+      `   • Arquivo: ${formData.semana1.upload ? formData.semana1.upload.name : 'Nenhum'}\n` +
+      `   • Link: ${formData.semana1.fileUrl ? `[Download](${formData.semana1.fileUrl})` : 'N/A'}\n\n` +
       `📅 **Semana 2:**\n` +
       `   • Conteúdos: ${formData.semana2.conteudos}\n` +
       `   • Observações: ${formData.semana2.obs || 'Nenhuma'}\n` +
-      `   • Arquivo: ${formData.semana2.upload ? formData.semana2.upload.name : 'Nenhum'}\n\n` +
+      `   • Arquivo: ${formData.semana2.upload ? formData.semana2.upload.name : 'Nenhum'}\n` +
+      `   • Link: ${formData.semana2.fileUrl ? `[Download](${formData.semana2.fileUrl})` : 'N/A'}\n\n` +
       `📅 **Semana 3:**\n` +
       `   • Conteúdos: ${formData.semana3.conteudos}\n` +
       `   • Observações: ${formData.semana3.obs || 'Nenhuma'}\n` +
-      `   • Arquivo: ${formData.semana3.upload ? formData.semana3.upload.name : 'Nenhum'}\n\n` +
+      `   • Arquivo: ${formData.semana3.upload ? formData.semana3.upload.name : 'Nenhum'}\n` +
+      `   • Link: ${formData.semana3.fileUrl ? `[Download](${formData.semana3.fileUrl})` : 'N/A'}\n\n` +
       `📅 **Semana 4:**\n` +
       `   • Conteúdos: ${formData.semana4.conteudos}\n` +
       `   • Observações: ${formData.semana4.obs || 'Nenhuma'}\n` +
-      `   • Arquivo: ${formData.semana4.upload ? formData.semana4.upload.name : 'Nenhum'}\n\n` +
+      `   • Arquivo: ${formData.semana4.upload ? formData.semana4.upload.name : 'Nenhum'}\n` +
+      `   • Link: ${formData.semana4.fileUrl ? `[Download](${formData.semana4.fileUrl})` : 'N/A'}\n\n` +
       `📝 **Observações Gerais:** ${formData.observacoes_gerais || 'Nenhuma'}\n\n` +
       `🚀 **Status:** Formulário de planejamento completo enviado com sucesso!`;
 
@@ -85,6 +112,7 @@ interface WeekData {
   conteudos: string;
   upload?: File;
   obs: string;
+  fileUrl?: string;
 }
 
 interface BrioFormData {
@@ -122,6 +150,11 @@ const BrioForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submitError, setSubmitError] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Initialize the file upload hook
+  const uploadFileToGCS = useFileUpload();
 
   const currentStepIndex = STEPS.indexOf(currentStep);
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
@@ -178,6 +211,29 @@ const BrioForm: React.FC = () => {
     setSubmitError('');
 
     try {
+      // Upload all files first
+      setIsUploading(true);
+      const uploadPromises: Promise<void>[] = [];
+      
+      // Upload files for each week
+      ['semana1', 'semana2', 'semana3', 'semana4'].forEach((week) => {
+        const weekKey = week as keyof Pick<BrioFormData, 'semana1' | 'semana2' | 'semana3' | 'semana4'>;
+        const weekData = formData[weekKey];
+        
+        if (weekData.upload) {
+          const uploadPromise = uploadFile(weekKey, weekData.upload);
+          uploadPromises.push(uploadPromise);
+        }
+      });
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+      }
+
+      setIsUploading(false);
+
+      // Now send the form data to Slack
       const result = await sendFormToSlack(formData, formData.disciplina);
       
       if (result.success) {
@@ -187,11 +243,37 @@ const BrioForm: React.FC = () => {
         setSubmitError(result.error || 'Erro desconhecido ao enviar formulário');
       }
     } catch (error) {
+      setIsUploading(false);
       setSubmitStatus('error');
-      setSubmitError('Erro ao enviar formulário');
+      setSubmitError(error instanceof Error ? error.message : 'Erro ao enviar formulário');
       console.error('Submission error:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const uploadFile = async (week: string, file: File) => {
+    try {
+      const filename = `${week}_${Date.now()}_${file.name}`;
+      
+      // Update upload progress
+      setUploadProgress(prev => ({ ...prev, [week]: 0 }));
+      
+      await uploadFileToGCS(filename, file);
+      
+      // Generate the file URL using the configured bucket name
+      const fileUrl = `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${filename}`;
+      
+      // Update the form data with the file URL
+      updateWeekData(week as 'semana1' | 'semana2' | 'semana3' | 'semana4', { fileUrl });
+      
+      // Mark upload as complete
+      setUploadProgress(prev => ({ ...prev, [week]: 100 }));
+      
+    } catch (error) {
+      console.error(`Error uploading file for ${week}:`, error);
+      setUploadProgress(prev => ({ ...prev, [week]: -1 })); // -1 indicates error
+      throw error;
     }
   };
 
@@ -427,9 +509,27 @@ const BrioForm: React.FC = () => {
                         <span className="text-xs">JPG, PNG ou PDF - Máximo 10MB</span>
                       </Label>
                       {weekData.upload && (
-                        <p className="mt-2 text-sm text-accent">
-                          Arquivo selecionado: {weekData.upload.name}
-                        </p>
+                        <div className="mt-3 space-y-2">
+                          <p className="text-sm text-accent">
+                            Arquivo selecionado: {weekData.upload.name}
+                          </p>
+                          {uploadProgress[weekKey] === 0 && (
+                            <div className="flex items-center justify-center space-x-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent"></div>
+                              <span className="text-xs text-muted-foreground">Fazendo upload...</span>
+                            </div>
+                          )}
+                          {uploadProgress[weekKey] === 100 && weekData.fileUrl && (
+                            <div className="text-xs text-green-600">
+                              ✅ Upload concluído
+                            </div>
+                          )}
+                          {uploadProgress[weekKey] === -1 && (
+                            <div className="text-xs text-red-600">
+                              ❌ Erro no upload
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -549,11 +649,16 @@ const BrioForm: React.FC = () => {
                     </p>
                     <Button
                       onClick={handleFormSubmission}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isUploading}
                       size="lg"
                       className="bg-accent text-accent-foreground hover:bg-accent/90 glow-cyan"
                     >
-                      {isSubmitting ? (
+                      {isUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Fazendo upload dos arquivos...
+                        </>
+                      ) : isSubmitting ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           Enviando...
@@ -599,6 +704,32 @@ const BrioForm: React.FC = () => {
                       Tentar Novamente
                     </Button>
                   </div>
+                )}
+
+                {/* Reset Button - only show after successful submission or if user wants to start over */}
+                {(submitStatus === 'success' || submitStatus === 'idle') && (
+                  <Button
+                    onClick={() => {
+                      setCurrentStep('inicio');
+                      setFormData({
+                        nome: '',
+                        disciplina: '',
+                        semana1: { conteudos: '', obs: '' },
+                        semana2: { conteudos: '', obs: '' },
+                        semana3: { conteudos: '', obs: '' },
+                        semana4: { conteudos: '', obs: '' },
+                        observacoes_gerais: '',
+                      });
+                      setSubmitStatus('idle');
+                      setSubmitError('');
+                      setUploadProgress({});
+                    }}
+                    variant="outline"
+                    size="lg"
+                    className="mt-4"
+                  >
+                    Criar Novo Planejamento
+                  </Button>
                 )}
               </CardContent>
             </Card>
