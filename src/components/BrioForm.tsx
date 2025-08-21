@@ -115,6 +115,16 @@ interface WeekData {
   fileUrl?: string;
 }
 
+interface MonthPlan {
+  mes: number;
+  ano: number;
+  semana1: WeekData;
+  semana2: WeekData;
+  semana3: WeekData;
+  semana4: WeekData;
+  observacoes_gerais: string;
+}
+
 interface BrioFormData {
   nome: string;
   disciplina: Discipline | '';
@@ -133,8 +143,15 @@ const disciplines = [
   { id: 'ciencias' as const, label: '🔬 Ciências', icon: Microscope },
 ];
 
-const STEPS = ['inicio', 'nome', 'disciplina', 'semana1', 'semana2', 'semana3', 'semana4', 'observacoes', 'final'] as const;
+const STEPS = ['inicio', 'como-vai-funcionar', 'nome', 'disciplina', 'selecao-periodos', 'planejamento', 'final'] as const;
 type Step = typeof STEPS[number];
+
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const YEARS = [2024, 2025, 2026].map(year => year.toString());
 
 const BrioForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>('inicio');
@@ -147,6 +164,13 @@ const BrioForm: React.FC = () => {
     semana4: { conteudos: '', obs: '' },
     observacoes_gerais: '',
   });
+  
+  // Multi-month planning state
+  const [quantidadeMeses, setQuantidadeMeses] = useState<'1' | '2' | '3+'>('1');
+  const [periodosEscolhidos, setPeriodosEscolhidos] = useState<{mes: number; ano: number}[]>([]);
+  const [planosMes, setPlanosMes] = useState<{[key: string]: MonthPlan}>({});
+  const [mesAtualEditando, setMesAtualEditando] = useState<string>('');
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submitError, setSubmitError] = useState<string>('');
@@ -186,14 +210,19 @@ const BrioForm: React.FC = () => {
         return formData.nome.trim() !== '';
       case 'disciplina':
         return formData.disciplina !== '';
-      case 'semana1':
-        return formData.semana1.conteudos.trim() !== '';
-      case 'semana2':
-        return formData.semana2.conteudos.trim() !== '';
-      case 'semana3':
-        return formData.semana3.conteudos.trim() !== '';
-      case 'semana4':
-        return formData.semana4.conteudos.trim() !== '';
+      case 'selecao-periodos':
+        return periodosEscolhidos.length > 0;
+      case 'planejamento':
+        // Check if all months have required content filled
+        return periodosEscolhidos.every(periodo => {
+          const key = `${periodo.mes}-${periodo.ano}`;
+          const plano = planosMes[key];
+          return plano && 
+                 plano.semana1.conteudos.trim() !== '' &&
+                 plano.semana2.conteudos.trim() !== '' &&
+                 plano.semana3.conteudos.trim() !== '' &&
+                 plano.semana4.conteudos.trim() !== '';
+        });
       default:
         return true;
     }
@@ -211,37 +240,71 @@ const BrioForm: React.FC = () => {
     setSubmitError('');
 
     try {
-      // Upload all files first
       setIsUploading(true);
-      const uploadPromises: Promise<void>[] = [];
       
-      // Upload files for each week
-      ['semana1', 'semana2', 'semana3', 'semana4'].forEach((week) => {
-        const weekKey = week as keyof Pick<BrioFormData, 'semana1' | 'semana2' | 'semana3' | 'semana4'>;
-        const weekData = formData[weekKey];
+      // Process each month separately
+      for (const periodo of periodosEscolhidos) {
+        const key = `${periodo.mes}-${periodo.ano}`;
+        const planoMes = planosMes[key];
         
-        if (weekData.upload) {
-          const uploadPromise = uploadFile(weekKey, weekData.upload);
-          uploadPromises.push(uploadPromise);
-        }
-      });
+        if (!planoMes) continue;
 
-      // Wait for all uploads to complete
-      if (uploadPromises.length > 0) {
-        await Promise.all(uploadPromises);
+        // Upload files for this month
+        const uploadPromises: Promise<void>[] = [];
+        ['semana1', 'semana2', 'semana3', 'semana4'].forEach((week) => {
+          const weekKey = week as keyof Pick<MonthPlan, 'semana1' | 'semana2' | 'semana3' | 'semana4'>;
+          const weekData = planoMes[weekKey];
+          
+          if (weekData.upload) {
+            const uploadPromise = uploadFileForMonth(key, weekKey, weekData.upload);
+            uploadPromises.push(uploadPromise);
+          }
+        });
+
+        // Wait for uploads to complete for this month
+        if (uploadPromises.length > 0) {
+          await Promise.all(uploadPromises);
+        }
+
+        // Create form data with period injected
+        const mesNome = MONTHS[periodo.mes - 1];
+        const periodoTag = `[PERIODO=${mesNome}/${periodo.ano}]`;
+        
+        const formDataWithPeriod: BrioFormData = {
+          nome: formData.nome,
+          disciplina: formData.disciplina,
+          semana1: {
+            ...planoMes.semana1,
+            obs: planoMes.semana1.obs ? `${periodoTag} ${planoMes.semana1.obs}` : planoMes.semana1.obs
+          },
+          semana2: {
+            ...planoMes.semana2,
+            obs: planoMes.semana2.obs ? `${periodoTag} ${planoMes.semana2.obs}` : planoMes.semana2.obs
+          },
+          semana3: {
+            ...planoMes.semana3,
+            obs: planoMes.semana3.obs ? `${periodoTag} ${planoMes.semana3.obs}` : planoMes.semana3.obs
+          },
+          semana4: {
+            ...planoMes.semana4,
+            obs: planoMes.semana4.obs ? `${periodoTag} ${planoMes.semana4.obs}` : planoMes.semana4.obs
+          },
+          observacoes_gerais: planoMes.observacoes_gerais 
+            ? `${periodoTag}\n${planoMes.observacoes_gerais}`
+            : periodoTag
+        };
+
+        // Send this month's data
+        const result = await sendFormToSlack(formDataWithPeriod, formData.disciplina);
+        
+        if (!result.success) {
+          throw new Error(result.error || `Erro ao enviar planejamento de ${mesNome}/${periodo.ano}`);
+        }
       }
 
       setIsUploading(false);
-
-      // Now send the form data to Slack
-      const result = await sendFormToSlack(formData, formData.disciplina);
+      setSubmitStatus('success');
       
-      if (result.success) {
-        setSubmitStatus('success');
-      } else {
-        setSubmitStatus('error');
-        setSubmitError(result.error || 'Erro desconhecido ao enviar formulário');
-      }
     } catch (error) {
       setIsUploading(false);
       setSubmitStatus('error');
@@ -277,6 +340,42 @@ const BrioForm: React.FC = () => {
     }
   };
 
+  const uploadFileForMonth = async (monthKey: string, week: string, file: File) => {
+    try {
+      const filename = `mapple-bear/${formData.nome.toLowerCase().replace(/\s+/g, '-')}/${monthKey}_${week}_${Date.now()}_${file.name}`;
+      
+      // Update upload progress
+      const uploadKey = `${monthKey}_${week}`;
+      setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+      
+      await uploadFileToGCS(filename, file);
+      
+      // Generate the file URL using the configured bucket name
+      const fileUrl = `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${filename}`;
+      
+      // Update the month plan with the file URL
+      setPlanosMes(prev => ({
+        ...prev,
+        [monthKey]: {
+          ...prev[monthKey],
+          [week]: {
+            ...prev[monthKey][week],
+            fileUrl
+          }
+        }
+      }));
+      
+      // Mark upload as complete
+      setUploadProgress(prev => ({ ...prev, [uploadKey]: 100 }));
+      
+    } catch (error) {
+      console.error(`Error uploading file for ${monthKey}_${week}:`, error);
+      const uploadKey = `${monthKey}_${week}`;
+      setUploadProgress(prev => ({ ...prev, [uploadKey]: -1 })); // -1 indicates error
+      throw error;
+    }
+  };
+
   const FloatingParticles = () => (
     <div className="particles">
       {[...Array(6)].map((_, i) => (
@@ -297,6 +396,104 @@ const BrioForm: React.FC = () => {
   const handleFileUpload = (week: 'semana1' | 'semana2' | 'semana3' | 'semana4', file: File | undefined) => {
     updateWeekData(week, { upload: file });
   };
+
+  const handleFileUploadForMonth = (monthKey: string, week: 'semana1' | 'semana2' | 'semana3' | 'semana4', file: File | undefined) => {
+    setPlanosMes(prev => ({
+      ...prev,
+      [monthKey]: {
+        ...prev[monthKey],
+        [week]: {
+          ...prev[monthKey][week],
+          upload: file
+        }
+      }
+    }));
+  };
+
+  const updateMonthPlan = (monthKey: string, updates: Partial<MonthPlan>) => {
+    setPlanosMes(prev => ({
+      ...prev,
+      [monthKey]: {
+        ...prev[monthKey],
+        ...updates
+      }
+    }));
+  };
+
+  const updateMonthWeekData = (monthKey: string, week: 'semana1' | 'semana2' | 'semana3' | 'semana4', data: Partial<WeekData>) => {
+    setPlanosMes(prev => ({
+      ...prev,
+      [monthKey]: {
+        ...prev[monthKey],
+        [week]: {
+          ...prev[monthKey][week],
+          ...data
+        }
+      }
+    }));
+  };
+
+  const adicionarPeriodo = () => {
+    const currentYear = new Date().getFullYear();
+    setPeriodosEscolhidos(prev => [...prev, { mes: 1, ano: currentYear }]);
+  };
+
+  const removerPeriodo = (index: number) => {
+    setPeriodosEscolhidos(prev => {
+      const novos = prev.filter((_, i) => i !== index);
+      // Remove planos dos períodos removidos
+      const novosPlanos = { ...planosMes };
+      const removido = prev[index];
+      if (removido) {
+        const key = `${removido.mes}-${removido.ano}`;
+        delete novosPlanos[key];
+      }
+      setPlanosMes(novosPlanos);
+      return novos;
+    });
+  };
+
+  const atualizarPeriodo = (index: number, mes: number, ano: number) => {
+    setPeriodosEscolhidos(prev => {
+      const novos = [...prev];
+      const antigoKey = `${novos[index].mes}-${novos[index].ano}`;
+      const novoKey = `${mes}-${ano}`;
+      
+      // Move plan data if key changed
+      if (antigoKey !== novoKey && planosMes[antigoKey]) {
+        setPlanosMes(planoPrev => {
+          const novosPlanos = { ...planoPrev };
+          novosPlanos[novoKey] = novosPlanos[antigoKey];
+          delete novosPlanos[antigoKey];
+          return novosPlanos;
+        });
+      }
+      
+      novos[index] = { mes, ano };
+      return novos;
+    });
+  };
+
+  // Initialize month plans when periods change
+  React.useEffect(() => {
+    periodosEscolhidos.forEach(periodo => {
+      const key = `${periodo.mes}-${periodo.ano}`;
+      if (!planosMes[key]) {
+        setPlanosMes(prev => ({
+          ...prev,
+          [key]: {
+            mes: periodo.mes,
+            ano: periodo.ano,
+            semana1: { conteudos: '', obs: '' },
+            semana2: { conteudos: '', obs: '' },
+            semana3: { conteudos: '', obs: '' },
+            semana4: { conteudos: '', obs: '' },
+            observacoes_gerais: ''
+          }
+        }));
+      }
+    });
+  }, [periodosEscolhidos, planosMes]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -332,6 +529,47 @@ const BrioForm: React.FC = () => {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case 'como-vai-funcionar':
+        return (
+          <div className="min-h-screen bg-gradient-hero relative p-4">
+            <FloatingParticles />
+            <div className="max-w-4xl mx-auto">
+              <div className="mb-8">
+                <Progress value={progress} className="w-full mb-4" />
+                <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-2">
+                  Como vai funcionar
+                </h2>
+                <p className="text-center text-muted-foreground">
+                  Entenda o processo de planejamento
+                </p>
+              </div>
+
+              <Card className="glass animate-fade-in">
+                <CardContent className="p-8">
+                  <p className="text-lg text-center text-muted-foreground leading-relaxed">
+                    Você seleciona 1 ou mais meses. Para cada mês, preenche os conteúdos das 4 semanas. 
+                    Salvaremos cada mês separadamente, sem alterar sua rotina e sem mudar nada no sistema da escola.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-between mt-8">
+                <Button variant="outline" onClick={prevStep}>
+                  <ArrowLeft className="mr-2 w-4 h-4" />
+                  Voltar
+                </Button>
+                <Button
+                  onClick={nextStep}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  Continuar
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         );
 
@@ -449,14 +687,7 @@ const BrioForm: React.FC = () => {
           </div>
         );
 
-      case 'semana1':
-      case 'semana2':
-      case 'semana3':
-      case 'semana4':
-        const weekNumber = currentStep.replace('semana', '');
-        const weekKey = currentStep as 'semana1' | 'semana2' | 'semana3' | 'semana4';
-        const weekData = formData[weekKey];
-
+      case 'selecao-periodos':
         return (
           <div className="min-h-screen bg-gradient-hero relative p-4">
             <FloatingParticles />
@@ -464,87 +695,116 @@ const BrioForm: React.FC = () => {
               <div className="mb-8">
                 <Progress value={progress} className="w-full mb-4" />
                 <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-2">
-                  Semana {weekNumber}
+                  Seleção de Períodos
                 </h2>
                 <p className="text-center text-muted-foreground">
-                  Planeje os conteúdos desta semana
+                  Escolha os meses que deseja planejar
                 </p>
               </div>
 
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8 space-y-6">
                   <div>
-                    <Label htmlFor={`semana${weekNumber}_conteudos`} className="text-lg font-medium text-foreground mb-3 block">
-                      Quais conteúdos você pretende trabalhar nesta semana? *
+                    <Label className="text-lg font-medium text-foreground mb-4 block">
+                      Quantos meses deseja planejar agora? *
                     </Label>
-                    <Textarea
-                      id={`semana${weekNumber}_conteudos`}
-                      placeholder="Descreva os conteúdos que serão abordados..."
-                      value={weekData.conteudos}
-                      onChange={(e) => updateWeekData(weekKey, { conteudos: e.target.value })}
-                      className="min-h-[120px] text-base"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor={`semana${weekNumber}_upload`} className="text-lg font-medium text-foreground mb-3 block">
-                      Adicionar foto do livro ou material de apoio (opcional)
-                    </Label>
-                    <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-accent/50 transition-colors">
-                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                      <Input
-                        id={`semana${weekNumber}_upload`}
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => handleFileUpload(weekKey, e.target.files?.[0])}
-                        className="hidden"
-                      />
-                      <Label
-                        htmlFor={`semana${weekNumber}_upload`}
-                        className="text-sm text-muted-foreground cursor-pointer hover:text-accent transition-colors"
-                      >
-                        Clique para selecionar um arquivo ou arraste aqui
-                        <br />
-                        <span className="text-xs">JPG, PNG ou PDF - Máximo 10MB</span>
+                    <RadioGroup
+                      value={quantidadeMeses}
+                      onValueChange={(value: '1' | '2' | '3+') => {
+                        setQuantidadeMeses(value);
+                        // Reset periods when changing quantity
+                        const currentYear = new Date().getFullYear();
+                        if (value === '1') {
+                          setPeriodosEscolhidos([{ mes: 1, ano: currentYear }]);
+                        } else if (value === '2') {
+                          setPeriodosEscolhidos([
+                            { mes: 1, ano: currentYear },
+                            { mes: 2, ano: currentYear }
+                          ]);
+                        } else {
+                          setPeriodosEscolhidos([
+                            { mes: 1, ano: currentYear },
+                            { mes: 2, ano: currentYear },
+                            { mes: 3, ano: currentYear }
+                          ]);
+                        }
+                      }}
+                      className="flex flex-col space-y-3"
+                    >
+                      <Label className="flex items-center space-x-3 cursor-pointer">
+                        <RadioGroupItem value="1" />
+                        <span>1 mês</span>
                       </Label>
-                      {weekData.upload && (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-sm text-accent">
-                            Arquivo selecionado: {weekData.upload.name}
-                          </p>
-                          {uploadProgress[weekKey] === 0 && (
-                            <div className="flex items-center justify-center space-x-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent"></div>
-                              <span className="text-xs text-muted-foreground">Fazendo upload...</span>
-                            </div>
-                          )}
-                          {uploadProgress[weekKey] === 100 && weekData.fileUrl && (
-                            <div className="text-xs text-green-600">
-                              ✅ Upload concluído
-                            </div>
-                          )}
-                          {uploadProgress[weekKey] === -1 && (
-                            <div className="text-xs text-red-600">
-                              ❌ Erro no upload
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                      <Label className="flex items-center space-x-3 cursor-pointer">
+                        <RadioGroupItem value="2" />
+                        <span>2 meses</span>
+                      </Label>
+                      <Label className="flex items-center space-x-3 cursor-pointer">
+                        <RadioGroupItem value="3+" />
+                        <span>3+ meses</span>
+                      </Label>
+                    </RadioGroup>
                   </div>
 
-                  <div>
-                    <Label htmlFor={`semana${weekNumber}_obs`} className="text-lg font-medium text-foreground mb-3 block">
-                      Observações para esta semana (opcional)
-                    </Label>
-                    <Textarea
-                      id={`semana${weekNumber}_obs`}
-                      placeholder="Alguma observação específica sobre esta semana?"
-                      value={weekData.obs}
-                      onChange={(e) => updateWeekData(weekKey, { obs: e.target.value })}
-                      className="min-h-[80px]"
-                    />
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-foreground">
+                      Períodos selecionados:
+                    </h3>
+                    
+                    {periodosEscolhidos.map((periodo, index) => (
+                      <div key={index} className="flex items-center space-x-4 p-4 border border-border rounded-lg">
+                        <div className="flex-1 grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-sm text-muted-foreground">Mês</Label>
+                            <select
+                              value={periodo.mes}
+                              onChange={(e) => atualizarPeriodo(index, parseInt(e.target.value), periodo.ano)}
+                              className="w-full mt-1 p-2 border border-border rounded-md bg-background text-foreground"
+                            >
+                              {MONTHS.map((month, monthIndex) => (
+                                <option key={monthIndex} value={monthIndex + 1}>
+                                  {month}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-sm text-muted-foreground">Ano</Label>
+                            <select
+                              value={periodo.ano}
+                              onChange={(e) => atualizarPeriodo(index, periodo.mes, parseInt(e.target.value))}
+                              className="w-full mt-1 p-2 border border-border rounded-md bg-background text-foreground"
+                            >
+                              {YEARS.map((year) => (
+                                <option key={year} value={year}>
+                                  {year}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        {quantidadeMeses === '3+' && periodosEscolhidos.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removerPeriodo(index)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            Remover
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+
+                    {quantidadeMeses === '3+' && (
+                      <Button
+                        variant="outline"
+                        onClick={adicionarPeriodo}
+                        className="w-full"
+                      >
+                        Adicionar mês
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -567,7 +827,7 @@ const BrioForm: React.FC = () => {
           </div>
         );
 
-      case 'observacoes':
+      case 'planejamento':
         return (
           <div className="min-h-screen bg-gradient-hero relative p-4">
             <FloatingParticles />
@@ -575,29 +835,135 @@ const BrioForm: React.FC = () => {
               <div className="mb-8">
                 <Progress value={progress} className="w-full mb-4" />
                 <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-2">
-                  Observações Gerais
+                  Planejamento dos Meses
                 </h2>
                 <p className="text-center text-muted-foreground">
-                  Alguma informação adicional sobre o planejamento?
+                  Preencha o conteúdo das 4 semanas para cada mês
                 </p>
               </div>
 
-              <Card className="glass animate-fade-in">
-                <CardContent className="p-8">
-                  <div>
-                    <Label htmlFor="observacoes_gerais" className="text-lg font-medium text-foreground mb-3 block">
-                      Observações gerais do planejamento (opcional)
-                    </Label>
-                    <Textarea
-                      id="observacoes_gerais"
-                      placeholder="Compartilhe qualquer informação adicional que possa ajudar no planejamento..."
-                      value={formData.observacoes_gerais}
-                      onChange={(e) => updateFormData({ observacoes_gerais: e.target.value })}
-                      className="min-h-[150px] text-base"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-6">
+                {periodosEscolhidos.map((periodo) => {
+                  const key = `${periodo.mes}-${periodo.ano}`;
+                  const plano = planosMes[key] || {
+                    mes: periodo.mes,
+                    ano: periodo.ano,
+                    semana1: { conteudos: '', obs: '' },
+                    semana2: { conteudos: '', obs: '' },
+                    semana3: { conteudos: '', obs: '' },
+                    semana4: { conteudos: '', obs: '' },
+                    observacoes_gerais: ''
+                  };
+                  const mesNome = MONTHS[periodo.mes - 1];
+
+                  return (
+                    <Card key={key} className="glass animate-fade-in">
+                      <CardHeader>
+                        <CardTitle className="text-2xl text-foreground">
+                          Planejamento – {mesNome} {periodo.ano}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* 4 semanas */}
+                        {(['semana1', 'semana2', 'semana3', 'semana4'] as const).map((semana) => {
+                          const weekNumber = semana.replace('semana', '');
+                          const weekData = plano[semana];
+                          const uploadKey = `${key}_${semana}`;
+
+                          return (
+                            <div key={semana} className="border border-border rounded-lg p-6 space-y-4">
+                              <h4 className="text-lg font-medium text-foreground">
+                                Semana {weekNumber}
+                              </h4>
+                              
+                              <div>
+                                <Label className="text-base font-medium text-foreground mb-2 block">
+                                  Quais conteúdos você pretende trabalhar nesta semana? *
+                                </Label>
+                                <Textarea
+                                  placeholder="Descreva os conteúdos que serão abordados..."
+                                  value={weekData.conteudos}
+                                  onChange={(e) => updateMonthWeekData(key, semana, { conteudos: e.target.value })}
+                                  className="min-h-[120px] text-base"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <Label className="text-base font-medium text-foreground mb-2 block">
+                                  Adicionar foto do livro ou material de apoio (opcional)
+                                </Label>
+                                <div className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent/50 transition-colors">
+                                  <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                  <Input
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.pdf"
+                                    onChange={(e) => handleFileUploadForMonth(key, semana, e.target.files?.[0])}
+                                    className="hidden"
+                                    id={`${key}_${semana}_upload`}
+                                  />
+                                  <Label
+                                    htmlFor={`${key}_${semana}_upload`}
+                                    className="text-sm text-muted-foreground cursor-pointer hover:text-accent transition-colors"
+                                  >
+                                    Clique para selecionar um arquivo
+                                    <br />
+                                    <span className="text-xs">JPG, PNG ou PDF - Máximo 10MB</span>
+                                  </Label>
+                                  {weekData.upload && (
+                                    <div className="mt-2 space-y-1">
+                                      <p className="text-sm text-accent">
+                                        Arquivo: {weekData.upload.name}
+                                      </p>
+                                      {uploadProgress[uploadKey] === 0 && (
+                                        <div className="flex items-center justify-center space-x-2">
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-accent"></div>
+                                          <span className="text-xs text-muted-foreground">Fazendo upload...</span>
+                                        </div>
+                                      )}
+                                      {uploadProgress[uploadKey] === 100 && weekData.fileUrl && (
+                                        <div className="text-xs text-green-600">✅ Upload concluído</div>
+                                      )}
+                                      {uploadProgress[uploadKey] === -1 && (
+                                        <div className="text-xs text-red-600">❌ Erro no upload</div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div>
+                                <Label className="text-base font-medium text-foreground mb-2 block">
+                                  Observações para esta semana (opcional)
+                                </Label>
+                                <Textarea
+                                  placeholder="Alguma observação específica sobre esta semana?"
+                                  value={weekData.obs}
+                                  onChange={(e) => updateMonthWeekData(key, semana, { obs: e.target.value })}
+                                  className="min-h-[80px]"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Observações gerais do mês */}
+                        <div>
+                          <Label className="text-base font-medium text-foreground mb-2 block">
+                            Observações gerais do planejamento deste mês (opcional)
+                          </Label>
+                          <Textarea
+                            placeholder="Compartilhe qualquer informação adicional sobre este mês..."
+                            value={plano.observacoes_gerais}
+                            onChange={(e) => updateMonthPlan(key, { observacoes_gerais: e.target.value })}
+                            className="min-h-[100px]"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
               <div className="flex justify-between mt-8">
                 <Button variant="outline" onClick={prevStep}>
@@ -605,12 +971,9 @@ const BrioForm: React.FC = () => {
                   Voltar
                 </Button>
                 <Button
-                  onClick={() => {
-                    setSubmitStatus('idle');
-                    setSubmitError('');
-                    nextStep();
-                  }}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                  onClick={nextStep}
+                  disabled={!canProceed()}
+                  className={canProceed() ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}
                 >
                   Finalizar Planejamento
                   <ArrowRight className="ml-2 w-4 h-4" />
@@ -708,26 +1071,29 @@ const BrioForm: React.FC = () => {
 
                 {/* Reset Button - only show after successful submission or if user wants to start over */}
                 {(submitStatus === 'success' || submitStatus === 'idle') && (
-                  <Button
-                    onClick={() => {
-                      setCurrentStep('inicio');
-                      setFormData({
-                        nome: '',
-                        disciplina: '',
-                        semana1: { conteudos: '', obs: '' },
-                        semana2: { conteudos: '', obs: '' },
-                        semana3: { conteudos: '', obs: '' },
-                        semana4: { conteudos: '', obs: '' },
-                        observacoes_gerais: '',
-                      });
-                      setSubmitStatus('idle');
-                      setSubmitError('');
-                      setUploadProgress({});
-                    }}
-                    variant="outline"
-                    size="lg"
-                    className="mt-4"
-                  >
+                    <Button
+                      onClick={() => {
+                        setCurrentStep('inicio');
+                        setFormData({
+                          nome: '',
+                          disciplina: '',
+                          semana1: { conteudos: '', obs: '' },
+                          semana2: { conteudos: '', obs: '' },
+                          semana3: { conteudos: '', obs: '' },
+                          semana4: { conteudos: '', obs: '' },
+                          observacoes_gerais: '',
+                        });
+                        setQuantidadeMeses('1');
+                        setPeriodosEscolhidos([]);
+                        setPlanosMes({});
+                        setSubmitStatus('idle');
+                        setSubmitError('');
+                        setUploadProgress({});
+                      }}
+                      variant="outline"
+                      size="lg"
+                      className="mt-4"
+                    >
                     Criar Novo Planejamento
                   </Button>
                 )}
