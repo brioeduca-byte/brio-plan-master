@@ -1052,7 +1052,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                       Planejamento enviado com sucesso!
                     </h3>
                     <p className="text-muted-foreground">
-                      Sua equipe recebeu o planejamento e entrará em contato em breve.
+Nossa equipe recebeu o planejamento e vai utilizá-lo para preparar os cronogramas personalizados dos alunos.
                     </p>
                   </div>
                 )}
