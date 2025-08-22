@@ -169,7 +169,6 @@ const BrioForm: React.FC = () => {
   const [quantidadeMeses, setQuantidadeMeses] = useState<'1' | '2' | '3+'>('1');
   const [periodosEscolhidos, setPeriodosEscolhidos] = useState<{ mes: number; ano: number }[]>([{ mes: 8, ano: 2025 }]);
   const [planosMes, setPlanosMes] = useState<{ [key: string]: MonthPlan }>({});
-  const [mesAtualEditando, setMesAtualEditando] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -504,7 +503,11 @@ const BrioForm: React.FC = () => {
             <Card className="w-full max-w-2xl glass animate-fade-in">
               <CardHeader className="text-center space-y-6">
                 <div className="mx-auto w-16 h-16 bg-accent rounded-full flex items-center justify-center glow-cyan">
-                  <BookOpen className="w-8 h-8 text-accent-foreground" />
+                  <img
+                    src="/logo.png"
+                    alt="Brio Educação"
+                    className="w-16 h-16 object-cover rounded-full"
+                  />
                 </div>
                 <div>
                   <h1 className="text-4xl font-heading font-bold text-foreground mb-6">
@@ -998,7 +1001,7 @@ const BrioForm: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-4xl font-heading font-bold text-foreground mb-4">
-                   Planejamento recebido!
+                    Planejamento recebido!
                   </h1>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-4">
                     Muito obrigado(a) por compartilhar seu planejamento.
