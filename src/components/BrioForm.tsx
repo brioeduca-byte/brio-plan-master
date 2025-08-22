@@ -498,7 +498,7 @@ const BrioForm: React.FC = () => {
     switch (currentStep) {
       case 'inicio':
         return (
-          <div className="min-h-screen bg-gradient-hero relative flex items-center justify-center p-4">
+          <div className="min-h-screen bg-gradient-hero relative flex items-center justify-center p-4 text-neutral-900">
             <FloatingParticles />
             <Card className="w-full max-w-2xl glass animate-fade-in">
               <CardHeader className="text-center space-y-6">
@@ -510,10 +510,10 @@ const BrioForm: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-heading font-bold text-foreground mb-6">
+                  <h1 className="text-4xl font-heading font-bold text-blue-500 mb-6">
                     📚 Planejamento de Conteúdo
                   </h1>
-                  <p className="text-lg text-muted-foreground leading-relaxed text-justify px-4">
+                  <p className="text-lg text-muted-foreground leading-relaxed text-justify px-4 text-neutral-900">
                     Olá, professor(a)!
 Este formulário foi pensado para facilitar nossa parceria e apoiar ainda mais o seu trabalho em sala de aula. A ideia é simples: registrar os conteúdos que pretende trabalhar nas próximas semanas, de forma prática e organizada.                
                     <br />
@@ -556,7 +556,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8">
-                  <p className="text-lg text-center text-muted-foreground leading-relaxed">
+                  <p className="text-lg text-center text-muted-foreground leading-relaxed text-neutral-900">
                     📌 <b>Durante este piloto, você selecionará os meses em questão (por exemplo: Setembro e Outubro).</b>
                     <br />
                     <br />
@@ -601,8 +601,8 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8">
                   <div>
-                    <Label htmlFor="nome" className="text-lg font-medium text-foreground mb-3 block">
-                      Nome completo *
+                    <Label htmlFor="nome" className="text-lg font-medium text-foreground mb-3 block text-neutral-900">
+                      Nome completo*
                     </Label>
                     <Input
                       id="nome"
@@ -658,7 +658,6 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                   >
                     {disciplines.map((discipline) => {
-                      const Icon = discipline.icon;
                       return (
                         <Label
                           key={discipline.id}
@@ -668,7 +667,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                             }`}
                         >
                           <RadioGroupItem value={discipline.id} className="sr-only" />
-                          <span className="text-lg font-medium text-foreground">
+                          <span className="text-lg font-medium text-foreground text-neutral-900">
                             {discipline.label}
                           </span>
                         </Label>
@@ -679,7 +678,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               </Card>
 
               <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={prevStep}>
+                <Button variant="outline" onClick={prevStep} className="text-white">
                   <ArrowLeft className="mr-2 w-4 h-4" />
                   Voltar
                 </Button>
@@ -698,7 +697,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
       case 'selecao-periodos':
         return (
-          <div className="min-h-screen bg-gradient-hero relative p-4">
+          <div className="min-h-screen bg-gradient-hero relative p-4 text-neutral-900">
             <FloatingParticles />
             <div className="max-w-4xl mx-auto">
               <div className="mb-8">
@@ -714,7 +713,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8 space-y-6">
                   <div>
-                    <Label className="text-lg font-medium text-foreground mb-4 block">
+                    <Label className="text-lg font-medium text-foreground mb-4 block text-neutral-900">
                       Quantos meses deseja planejar agora? *
                     </Label>
                     <RadioGroup
@@ -738,7 +737,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                           ]);
                         }
                       }}
-                      className="flex flex-col space-y-3"
+                      className="flex flex-col space-y-3 text-neutral-900"
                     >
                       <Label className="flex items-center space-x-3 cursor-pointer">
                         <RadioGroupItem value="1" />
@@ -756,19 +755,19 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-foreground">
+                    <h3 className="text-lg font-medium text-foreground text-neutral-900">
                       Períodos selecionados:
                     </h3>
 
                     {periodosEscolhidos.map((periodo, index) => (
-                      <div key={index} className="flex items-center space-x-4 p-4 border border-border rounded-lg">
+                      <div key={index} className="flex items-center space-x-4 p-4 rounded-lg">
                         <div className="flex-1 grid grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm text-muted-foreground">Mês</Label>
+                            <Label className="text-sm text-muted-foreground text-neutral-700">Mês</Label>
                             <select
                               value={periodo.mes}
                               onChange={(e) => atualizarPeriodo(index, parseInt(e.target.value), periodo.ano)}
-                              className="w-full mt-1 p-2 border border-border rounded-md bg-background text-foreground"
+                              className="w-full mt-1 p-2 border border-border rounded-md bg-gray-50 text-foreground text-neutral-900"
                             >
                               {MONTHS.map((month, monthIndex) => (
                                 <option key={monthIndex} value={monthIndex + 1}>
@@ -778,11 +777,11 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                             </select>
                           </div>
                           <div>
-                            <Label className="text-sm text-muted-foreground">Ano</Label>
+                            <Label className="text-sm text-muted-foreground text-neutral-700">Ano</Label>
                             <select
                               value={periodo.ano}
                               onChange={(e) => atualizarPeriodo(index, periodo.mes, parseInt(e.target.value))}
-                              className="w-full mt-1 p-2 border border-border rounded-md bg-background text-foreground"
+                              className="w-full mt-1 p-2 border border-border rounded-md bg-gray-50 text-foreground text-neutral-900"
                             >
                               {YEARS.map((year) => (
                                 <option key={year} value={year}>
@@ -797,7 +796,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                             variant="outline"
                             size="sm"
                             onClick={() => removerPeriodo(index)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-white bg-red-500 text-sm font-bold border-0 mt-5 hover:bg-red-600 hover:text-white"
                           >
                             Remover
                           </Button>
@@ -819,7 +818,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               </Card>
 
               <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={prevStep}>
+                <Button variant="outline" onClick={prevStep} className="text-white">
                   <ArrowLeft className="mr-2 w-4 h-4" />
                   Voltar
                 </Button>
@@ -843,7 +842,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
             <div className="max-w-4xl mx-auto">
               <div className="mb-8">
                 <Progress value={progress} className="w-full mb-4" />
-                <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-2">
+                <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-2 ">
                   Planejamento dos Meses
                 </h2>
                 <p className="text-center text-muted-foreground">
@@ -868,7 +867,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                   return (
                     <Card key={key} className="glass animate-fade-in">
                       <CardHeader>
-                        <CardTitle className="text-2xl text-foreground">
+                        <CardTitle className="text-2xl text-foreground text-neutral-900">
                           Planejamento – {mesNome} {periodo.ano}
                         </CardTitle>
                       </CardHeader>
@@ -880,14 +879,14 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                           const uploadKey = `${key}_${semana}`;
 
                           return (
-                            <div key={semana} className="border border-border rounded-lg p-6 space-y-4">
-                              <h4 className="text-lg font-medium text-foreground">
+                            <div key={semana} className="border border-gray-200 rounded-lg p-6 space-y-4">
+                              <h4 className="text-lg font-medium text-foreground text-neutral-900">
                                 Semana {weekNumber}
                               </h4>
 
                               <div>
-                                <Label className="text-base font-medium text-foreground mb-2 block">
-                                  Semana {weekNumber} – Quais conteúdos você pretende trabalhar nesta semana? *
+                                <Label className="text-base font-medium text-foreground mb-2 block text-neutral-900">
+                                  Quais conteúdos você pretende trabalhar nesta semana? *
                                 </Label>
                                 <Textarea
                                   placeholder="Descreva os conteúdos que serão abordados..."
@@ -899,7 +898,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                               </div>
 
                               <div>
-                                <Label className="text-base font-medium text-foreground mb-2 block">
+                                <Label className="text-base font-medium text-foreground mb-2 block text-neutral-900">
                                   Adicionar foto do livro ou material de apoio (opcional)
                                 </Label>
                                 <div className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent/50 transition-colors">
@@ -942,7 +941,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                               </div>
 
                               <div>
-                                <Label className="text-base font-medium text-foreground mb-2 block">
+                                <Label className="text-base font-medium text-foreground mb-2 block text-neutral-900">
                                   Observações para esta semana (opcional)
                                 </Label>
                                 <Textarea
@@ -958,7 +957,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
                         {/* Observações gerais do mês */}
                         <div>
-                          <Label className="text-base font-medium text-foreground mb-2 block">
+                          <Label className="text-base font-medium text-foreground mb-2 block text-neutral-900">
                             Observações gerais do planejamento deste mês (opcional)
                           </Label>
                           <Textarea
@@ -994,7 +993,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
       case 'final':
         return (
-          <div className="min-h-screen bg-gradient-success relative flex items-center justify-center p-4">
+          <div className="min-h-screen bg-gradient-success relative flex items-center justify-center p-4 text-neutral-900">
             <FloatingParticles />
             <Card className="w-full max-w-2xl glass animate-fade-in">
               <CardHeader className="text-center space-y-6">
@@ -1002,14 +1001,14 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                   <CheckCircle className="w-10 h-10 text-success-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-heading font-bold text-foreground mb-4">
+                  <h1 className="text-4xl font-heading font-bold text-foreground mb-4 text-neutral-900">
                     Planejamento recebido!
                   </h1>
-                  <p className="text-lg text-muted-foreground leading-relaxed mb-4">
+                  <p className="text-lg text-muted-foreground leading-relaxed mb-4 text-neutral-900">
                     Muito obrigado(a) por compartilhar seu planejamento.
                     Este é um passo essencial para construirmos juntos um piloto de sucesso, no qual:
                   </p>
-                  <ul className="list-disc list-inside text-muted-foreground text-center mb-4 px-4 space-y-2">
+                  <ul className="list-disc list-inside text-muted-foreground text-center mb-4 px-4 space-y-2 text-neutral-800">
                     <li>Os alunos terão clareza e autonomia sobre seus estudos;</li>
                     <li>Os professores contarão com uma ferramenta que reduz sobrecarga e valoriza seu tempo;</li>
                     <li>A escola terá indicadores claros de engajamento e aprendizagem.</li>
