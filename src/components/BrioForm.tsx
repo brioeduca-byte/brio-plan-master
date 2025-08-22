@@ -887,13 +887,13 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
                               <div>
                                 <Label className="text-base font-medium text-foreground mb-2 block">
-                                  Quais conteúdos você pretende trabalhar nesta semana? *
+                                  Semana {weekNumber} – Quais conteúdos você pretende trabalhar nesta semana? *
                                 </Label>
                                 <Textarea
                                   placeholder="Descreva os conteúdos que serão abordados..."
                                   value={weekData.conteudos}
                                   onChange={(e) => updateMonthWeekData(key, semana, { conteudos: e.target.value })}
-                                  className="min-h-[120px] text-base"
+                                  className="min-h-[120px] text-base bg-white"
                                   required
                                 />
                               </div>
@@ -949,7 +949,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                                   placeholder="Alguma observação específica sobre esta semana?"
                                   value={weekData.obs}
                                   onChange={(e) => updateMonthWeekData(key, semana, { obs: e.target.value })}
-                                  className="min-h-[80px]"
+                                  className="min-h-[80px] bg-white"
                                 />
                               </div>
                             </div>
@@ -965,7 +965,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                             placeholder="Compartilhe qualquer informação adicional sobre este mês..."
                             value={plano.observacoes_gerais}
                             onChange={(e) => updateMonthPlan(key, { observacoes_gerais: e.target.value })}
-                            className="min-h-[100px]"
+                            className="min-h-[100px] bg-white"
                           />
                         </div>
                       </CardContent>
