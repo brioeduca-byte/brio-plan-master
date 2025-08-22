@@ -518,7 +518,7 @@ const BrioForm: React.FC = () => {
 Este formulário foi pensado para facilitar nossa parceria e apoiar ainda mais o seu trabalho em sala de aula. A ideia é simples: registrar os conteúdos que pretende trabalhar nas próximas semanas, de forma prática e organizada.                    <br />
                     <br />
 Com essas informações, nós da Brio Educação vamos preparar cronogramas personalizados e gamificados para os alunos. Assim, eles terão mais clareza sobre o que estudar, mais autonomia para aprender no seu ritmo, e você terá mais tranquilidade para focar no que realmente importa: acompanhar o desenvolvimento de cada estudante.
-                        <br />                   
+                    <br />                   
 Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia para potencializar o aprendizado, sempre respeitando a metodologia da escola e o papel fundamental do professor.
                   </p>
                 </div>
