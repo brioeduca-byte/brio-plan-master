@@ -164,19 +164,19 @@ const BrioForm: React.FC = () => {
     semana4: { conteudos: '', obs: '' },
     observacoes_gerais: '',
   });
-  
+
   // Multi-month planning state
   const [quantidadeMeses, setQuantidadeMeses] = useState<'1' | '2' | '3+'>('1');
-  const [periodosEscolhidos, setPeriodosEscolhidos] = useState<{mes: number; ano: number}[]>([]);
-  const [planosMes, setPlanosMes] = useState<{[key: string]: MonthPlan}>({});
+  const [periodosEscolhidos, setPeriodosEscolhidos] = useState<{ mes: number; ano: number }[]>([]);
+  const [planosMes, setPlanosMes] = useState<{ [key: string]: MonthPlan }>({});
   const [mesAtualEditando, setMesAtualEditando] = useState<string>('');
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submitError, setSubmitError] = useState<string>('');
-  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // Initialize the file upload hook
   const uploadFileToGCS = useFileUpload();
 
@@ -217,11 +217,11 @@ const BrioForm: React.FC = () => {
         return periodosEscolhidos.every(periodo => {
           const key = `${periodo.mes}-${periodo.ano}`;
           const plano = planosMes[key];
-          return plano && 
-                 plano.semana1.conteudos.trim() !== '' &&
-                 plano.semana2.conteudos.trim() !== '' &&
-                 plano.semana3.conteudos.trim() !== '' &&
-                 plano.semana4.conteudos.trim() !== '';
+          return plano &&
+            plano.semana1.conteudos.trim() !== '' &&
+            plano.semana2.conteudos.trim() !== '' &&
+            plano.semana3.conteudos.trim() !== '' &&
+            plano.semana4.conteudos.trim() !== '';
         });
       default:
         return true;
@@ -241,12 +241,12 @@ const BrioForm: React.FC = () => {
 
     try {
       setIsUploading(true);
-      
+
       // Process each month separately
       for (const periodo of periodosEscolhidos) {
         const key = `${periodo.mes}-${periodo.ano}`;
         const planoMes = planosMes[key];
-        
+
         if (!planoMes) continue;
 
         // Upload files for this month
@@ -254,7 +254,7 @@ const BrioForm: React.FC = () => {
         ['semana1', 'semana2', 'semana3', 'semana4'].forEach((week) => {
           const weekKey = week as keyof Pick<MonthPlan, 'semana1' | 'semana2' | 'semana3' | 'semana4'>;
           const weekData = planoMes[weekKey];
-          
+
           if (weekData.upload) {
             const uploadPromise = uploadFileForMonth(key, weekKey, weekData.upload);
             uploadPromises.push(uploadPromise);
@@ -269,7 +269,7 @@ const BrioForm: React.FC = () => {
         // Create form data with period injected
         const mesNome = MONTHS[periodo.mes - 1];
         const periodoTag = `[PERIODO=${mesNome}/${periodo.ano}]`;
-        
+
         const formDataWithPeriod: BrioFormData = {
           nome: formData.nome,
           disciplina: formData.disciplina,
@@ -289,14 +289,14 @@ const BrioForm: React.FC = () => {
             ...planoMes.semana4,
             obs: planoMes.semana4.obs ? `${periodoTag} ${planoMes.semana4.obs}` : planoMes.semana4.obs
           },
-          observacoes_gerais: planoMes.observacoes_gerais 
+          observacoes_gerais: planoMes.observacoes_gerais
             ? `${periodoTag}\n${planoMes.observacoes_gerais}`
             : periodoTag
         };
 
         // Send this month's data
         const result = await sendFormToSlack(formDataWithPeriod, formData.disciplina);
-        
+
         if (!result.success) {
           throw new Error(result.error || `Erro ao enviar planejamento de ${mesNome}/${periodo.ano}`);
         }
@@ -304,7 +304,7 @@ const BrioForm: React.FC = () => {
 
       setIsUploading(false);
       setSubmitStatus('success');
-      
+
     } catch (error) {
       setIsUploading(false);
       setSubmitStatus('error');
@@ -318,21 +318,21 @@ const BrioForm: React.FC = () => {
   const uploadFile = async (week: string, file: File) => {
     try {
       const filename = `mapple-bear/${formData.nome.toLowerCase().replace(/\s+/g, '-')}/${week}_${Date.now()}_${file.name}`;
-      
+
       // Update upload progress
       setUploadProgress(prev => ({ ...prev, [week]: 0 }));
-      
+
       await uploadFileToGCS(filename, file);
-      
+
       // Generate the file URL using the configured bucket name
       const fileUrl = `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${filename}`;
-      
+
       // Update the form data with the file URL
       updateWeekData(week as 'semana1' | 'semana2' | 'semana3' | 'semana4', { fileUrl });
-      
+
       // Mark upload as complete
       setUploadProgress(prev => ({ ...prev, [week]: 100 }));
-      
+
     } catch (error) {
       console.error(`Error uploading file for ${week}:`, error);
       setUploadProgress(prev => ({ ...prev, [week]: -1 })); // -1 indicates error
@@ -343,16 +343,16 @@ const BrioForm: React.FC = () => {
   const uploadFileForMonth = async (monthKey: string, week: string, file: File) => {
     try {
       const filename = `mapple-bear/${formData.nome.toLowerCase().replace(/\s+/g, '-')}/${monthKey}_${week}_${Date.now()}_${file.name}`;
-      
+
       // Update upload progress
       const uploadKey = `${monthKey}_${week}`;
       setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
-      
+
       await uploadFileToGCS(filename, file);
-      
+
       // Generate the file URL using the configured bucket name
       const fileUrl = `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${filename}`;
-      
+
       // Update the month plan with the file URL
       setPlanosMes(prev => ({
         ...prev,
@@ -364,10 +364,10 @@ const BrioForm: React.FC = () => {
           }
         }
       }));
-      
+
       // Mark upload as complete
       setUploadProgress(prev => ({ ...prev, [uploadKey]: 100 }));
-      
+
     } catch (error) {
       console.error(`Error uploading file for ${monthKey}_${week}:`, error);
       const uploadKey = `${monthKey}_${week}`;
@@ -458,7 +458,7 @@ const BrioForm: React.FC = () => {
       const novos = [...prev];
       const antigoKey = `${novos[index].mes}-${novos[index].ano}`;
       const novoKey = `${mes}-${ano}`;
-      
+
       // Move plan data if key changed
       if (antigoKey !== novoKey && planosMes[antigoKey]) {
         setPlanosMes(planoPrev => {
@@ -468,7 +468,7 @@ const BrioForm: React.FC = () => {
           return novosPlanos;
         });
       }
-      
+
       novos[index] = { mes, ano };
       return novos;
     });
@@ -507,14 +507,16 @@ const BrioForm: React.FC = () => {
                   <BookOpen className="w-8 h-8 text-accent-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-heading font-bold text-foreground mb-2">
+                  <h1 className="text-4xl font-heading font-bold text-foreground mb-6">
                     📚 Planejamento de Conteúdo
                   </h1>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    Olá, professor(a)! Vamos planejar juntos os conteúdos das próximas quatro semanas 
-                    para que seus alunos tenham clareza do que estudar e mais autonomia para aprender. 
-                    Esse é o primeiro passo de uma parceria que vai potencializar o aprendizado e 
-                    reduzir a sobrecarga em sala de aula.
+                  <p className="text-lg text-muted-foreground leading-relaxed text-justify px-4">
+                    Olá, professor(a)!
+                    Este formulário foi pensado para tornar nosso trabalho conjunto mais ágil e eficiente. A ideia é que você registre os conteúdos que pretende trabalhar nas próximas semanas, de forma simples e organizada.
+                    <br />
+                    <br />
+                    Com essas informações, a Brio Educação vai construir <b>cronogramas personalizados e gamificados</b> para os alunos, garantindo que o estudo acompanhe o ritmo da escola, incentive a autonomia dos estudantes e reduza a necessidade de retrabalho do professor.
+                    Esse é o primeiro passo de uma <b>parceria estratégica</b>: somar tecnologia e ciência da aprendizagem à prática pedagógica da escola, respeitando sua metodologia e potencializando os resultados.
                   </p>
                 </div>
               </CardHeader>
@@ -550,8 +552,11 @@ const BrioForm: React.FC = () => {
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8">
                   <p className="text-lg text-center text-muted-foreground leading-relaxed">
-                    Você seleciona 1 ou mais meses. Para cada mês, preenche os conteúdos das 4 semanas. 
-                    Salvaremos cada mês separadamente, sem alterar sua rotina e sem mudar nada no sistema da escola.
+                    📌 <b>Durante este piloto, você selecionará os meses em questão (por exemplo: Setembro e Outubro).</b>
+                    <br />
+                    <br />
+                    Para cada mês, basta preencher os conteúdos previstos para as 4 semanas.
+                    Cada mês será salvo separadamente, de forma organizada, sem alterar sua rotina e sem interferir no sistema pedagógico da escola.
                   </p>
                 </CardContent>
               </Card>
@@ -652,11 +657,10 @@ const BrioForm: React.FC = () => {
                       return (
                         <Label
                           key={discipline.id}
-                          className={`relative flex items-center space-x-4 p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${
-                            formData.disciplina === discipline.id
-                              ? 'border-accent bg-accent/10 glow-cyan'
-                              : 'border-border hover:border-accent/50'
-                          }`}
+                          className={`relative flex items-center space-x-4 p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${formData.disciplina === discipline.id
+                            ? 'border-accent bg-accent/10 glow-cyan'
+                            : 'border-border hover:border-accent/50'
+                            }`}
                         >
                           <RadioGroupItem value={discipline.id} className="sr-only" />
                           <span className="text-lg font-medium text-foreground">
@@ -750,7 +754,7 @@ const BrioForm: React.FC = () => {
                     <h3 className="text-lg font-medium text-foreground">
                       Períodos selecionados:
                     </h3>
-                    
+
                     {periodosEscolhidos.map((periodo, index) => (
                       <div key={index} className="flex items-center space-x-4 p-4 border border-border rounded-lg">
                         <div className="flex-1 grid grid-cols-2 gap-4">
@@ -875,7 +879,7 @@ const BrioForm: React.FC = () => {
                               <h4 className="text-lg font-medium text-foreground">
                                 Semana {weekNumber}
                               </h4>
-                              
+
                               <div>
                                 <Label className="text-base font-medium text-foreground mb-2 block">
                                   Quais conteúdos você pretende trabalhar nesta semana? *
@@ -994,22 +998,23 @@ const BrioForm: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-4xl font-heading font-bold text-foreground mb-4">
-                    ✅ Planejamento recebido!
+                   Planejamento recebido!
                   </h1>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    Obrigado(a) por dar este primeiro passo. Este é o início da nossa parceria: 
-                    juntos, vamos potencializar o aprendizado dos alunos, promover mais autonomia 
-                    de forma divertida e reduzir a sobrecarga dos professores.
+                  <p className="text-lg text-muted-foreground leading-relaxed mb-4">
+                    Muito obrigado(a) por compartilhar seu planejamento.
+                    Este é um passo essencial para construirmos juntos um piloto de sucesso, no qual:
                   </p>
+                  <ul className="list-disc list-inside text-muted-foreground text-center mb-4 px-4 space-y-2">
+                    <li>Os alunos terão clareza e autonomia sobre seus estudos;</li>
+                    <li>Os professores contarão com uma ferramenta que reduz sobrecarga e valoriza seu tempo;</li>
+                    <li>A escola terá indicadores claros de engajamento e aprendizagem.</li>
+                  </ul>
                 </div>
               </CardHeader>
               <CardContent className="text-center space-y-4">
                 {/* Submission Status */}
                 {submitStatus === 'idle' && (
                   <div className="text-center">
-                    <p className="text-muted-foreground mb-4">
-                      Clique no botão abaixo para enviar seu planejamento para nossa equipe.
-                    </p>
                     <Button
                       onClick={handleFormSubmission}
                       disabled={isSubmitting || isUploading}
@@ -1019,7 +1024,7 @@ const BrioForm: React.FC = () => {
                       {isUploading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Fazendo upload dos arquivos...
+                          Enviando...
                         </>
                       ) : isSubmitting ? (
                         <>
@@ -1039,7 +1044,7 @@ const BrioForm: React.FC = () => {
                       <CheckCircle className="w-8 h-8 text-white" />
                     </div>
                     <h3 className="text-xl font-semibold text-green-600">
-                      ✅ Planejamento enviado com sucesso!
+                      Planejamento enviado com sucesso!
                     </h3>
                     <p className="text-muted-foreground">
                       Sua equipe recebeu o planejamento e entrará em contato em breve.
@@ -1070,30 +1075,30 @@ const BrioForm: React.FC = () => {
                 )}
 
                 {/* Reset Button - only show after successful submission or if user wants to start over */}
-                {(submitStatus === 'success' || submitStatus === 'idle') && (
-                    <Button
-                      onClick={() => {
-                        setCurrentStep('inicio');
-                        setFormData({
-                          nome: '',
-                          disciplina: '',
-                          semana1: { conteudos: '', obs: '' },
-                          semana2: { conteudos: '', obs: '' },
-                          semana3: { conteudos: '', obs: '' },
-                          semana4: { conteudos: '', obs: '' },
-                          observacoes_gerais: '',
-                        });
-                        setQuantidadeMeses('1');
-                        setPeriodosEscolhidos([]);
-                        setPlanosMes({});
-                        setSubmitStatus('idle');
-                        setSubmitError('');
-                        setUploadProgress({});
-                      }}
-                      variant="outline"
-                      size="lg"
-                      className="mt-4"
-                    >
+                {(submitStatus === 'success') && (
+                  <Button
+                    onClick={() => {
+                      setCurrentStep('inicio');
+                      setFormData({
+                        nome: '',
+                        disciplina: '',
+                        semana1: { conteudos: '', obs: '' },
+                        semana2: { conteudos: '', obs: '' },
+                        semana3: { conteudos: '', obs: '' },
+                        semana4: { conteudos: '', obs: '' },
+                        observacoes_gerais: '',
+                      });
+                      setQuantidadeMeses('1');
+                      setPeriodosEscolhidos([]);
+                      setPlanosMes({});
+                      setSubmitStatus('idle');
+                      setSubmitError('');
+                      setUploadProgress({});
+                    }}
+                    variant="outline"
+                    size="lg"
+                    className="mt-4"
+                  >
                     Criar Novo Planejamento
                   </Button>
                 )}
