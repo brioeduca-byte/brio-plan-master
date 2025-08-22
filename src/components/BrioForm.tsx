@@ -515,11 +515,11 @@ const BrioForm: React.FC = () => {
                   </h1>
                   <p className="text-lg text-muted-foreground leading-relaxed text-justify px-4">
                     Olá, professor(a)!
-                    Este formulário foi pensado para tornar nosso trabalho conjunto mais ágil e eficiente. A ideia é que você registre os conteúdos que pretende trabalhar nas próximas semanas, de forma simples e organizada.
+Este formulário foi pensado para facilitar nossa parceria e apoiar ainda mais o seu trabalho em sala de aula. A ideia é simples: registrar os conteúdos que pretende trabalhar nas próximas semanas, de forma prática e organizada.                    <br />
                     <br />
-                    <br />
-                    Com essas informações, a Brio Educação vai construir <b>cronogramas personalizados e gamificados</b> para os alunos, garantindo que o estudo acompanhe o ritmo da escola, incentive a autonomia dos estudantes e reduza a necessidade de retrabalho do professor.
-                    Esse é o primeiro passo de uma <b>parceria estratégica</b>: somar tecnologia e ciência da aprendizagem à prática pedagógica da escola, respeitando sua metodologia e potencializando os resultados.
+Com essas informações, nós da Brio Educação vamos preparar cronogramas personalizados e gamificados para os alunos. Assim, eles terão mais clareza sobre o que estudar, mais autonomia para aprender no seu ritmo, e você terá mais tranquilidade para focar no que realmente importa: acompanhar o desenvolvimento de cada estudante.
+                        <br />                   
+Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia para potencializar o aprendizado, sempre respeitando a metodologia da escola e o papel fundamental do professor.
                   </p>
                 </div>
               </CardHeader>
