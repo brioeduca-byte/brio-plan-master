@@ -167,7 +167,7 @@ const BrioForm: React.FC = () => {
 
   // Multi-month planning state
   const [quantidadeMeses, setQuantidadeMeses] = useState<'1' | '2' | '3+'>('1');
-  const [periodosEscolhidos, setPeriodosEscolhidos] = useState<{ mes: number; ano: number }[]>([]);
+  const [periodosEscolhidos, setPeriodosEscolhidos] = useState<{ mes: number; ano: number }[]>([{ mes: 8, ano: 2025 }]);
   const [planosMes, setPlanosMes] = useState<{ [key: string]: MonthPlan }>({});
   const [mesAtualEditando, setMesAtualEditando] = useState<string>('');
 
