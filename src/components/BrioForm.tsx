@@ -48,6 +48,9 @@ const sendFormToSlack = async (
   disciplina: string
 ): Promise<SlackApiResponse> => {
   try {
+    console.log('📧 Preparando mensagem para Slack...');
+    console.log('Endpoint:', SLACK_FEEDBACK_ENDPOINT);
+    
     /* ---------- keep the original message structure ---------- */
     const message =
       `🎯 # Formulário de Planejamento de Conteúdo!\n\n` +
@@ -78,6 +81,8 @@ const sendFormToSlack = async (
 
     const payload: FeedbackRequest = { message };
 
+    console.log('📤 Enviando requisição...');
+    
     /* ---------- simple POST, no pre-flight workarounds ---------- */
     const response = await fetch(SLACK_FEEDBACK_ENDPOINT, {
       method: 'POST',
@@ -85,19 +90,24 @@ const sendFormToSlack = async (
       body: JSON.stringify(payload),
     });
 
+    console.log('📥 Resposta recebida:', response.status, response.statusText);
+
     const result: SlackApiResponse = await response.json();
+    console.log('📋 Resultado:', result);
 
     if (!response.ok) {
-      console.error('API Error:', response.status, result);
+      console.error('❌ API Error:', response.status, result);
       return {
         success: false,
         error: result.error || `HTTP ${response.status}: ${response.statusText}`,
       };
     }
 
+    console.log('✅ Mensagem enviada com sucesso para Slack');
     return result;
   } catch (error) {
-    console.error('Network or parsing error:', error);
+    console.error('💥 Network or parsing error:', error);
+    console.error('Stack:', error instanceof Error ? error.stack : 'N/A');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Erro de conexão desconhecido',
@@ -228,8 +238,21 @@ const BrioForm: React.FC = () => {
   };
 
   const handleFormSubmission = async () => {
+    console.log('=== INICIANDO ENVIO ===');
+    console.log('Disciplina:', formData.disciplina);
+    console.log('Períodos escolhidos:', periodosEscolhidos);
+    console.log('Planos por mês:', planosMes);
+
     if (!formData.disciplina) {
+      console.error('❌ Disciplina não selecionada');
       setSubmitError('Disciplina não selecionada');
+      setSubmitStatus('error');
+      return;
+    }
+
+    if (periodosEscolhidos.length === 0) {
+      console.error('❌ Nenhum período selecionado');
+      setSubmitError('Nenhum período selecionado');
       setSubmitStatus('error');
       return;
     }
@@ -240,13 +263,19 @@ const BrioForm: React.FC = () => {
 
     try {
       setIsUploading(true);
+      console.log(`📤 Processando ${periodosEscolhidos.length} período(s)...`);
 
       // Process each month separately
       for (const periodo of periodosEscolhidos) {
         const key = `${periodo.mes}-${periodo.ano}`;
         const planoMes = planosMes[key];
 
-        if (!planoMes) continue;
+        console.log(`\n--- Processando ${MONTHS[periodo.mes - 1]}/${periodo.ano} ---`);
+
+        if (!planoMes) {
+          console.warn(`⚠️ Plano não encontrado para ${key}`);
+          continue;
+        }
 
         // Upload files for this month
         const uploadPromises: Promise<void>[] = [];
@@ -255,6 +284,7 @@ const BrioForm: React.FC = () => {
           const weekData = planoMes[weekKey];
 
           if (weekData.upload) {
+            console.log(`📎 Upload agendado: ${week} - ${weekData.upload.name}`);
             const uploadPromise = uploadFileForMonth(key, weekKey, weekData.upload);
             uploadPromises.push(uploadPromise);
           }
@@ -262,7 +292,9 @@ const BrioForm: React.FC = () => {
 
         // Wait for uploads to complete for this month
         if (uploadPromises.length > 0) {
+          console.log(`⏳ Aguardando ${uploadPromises.length} upload(s)...`);
           await Promise.all(uploadPromises);
+          console.log('✅ Todos os uploads concluídos');
         }
 
         // Create form data with period injected
@@ -293,24 +325,34 @@ const BrioForm: React.FC = () => {
             : periodoTag
         };
 
+        console.log('📨 Enviando para Slack...');
+        console.log('Dados:', JSON.stringify(formDataWithPeriod, null, 2));
+
         // Send this month's data
         const result = await sendFormToSlack(formDataWithPeriod, formData.disciplina);
 
         if (!result.success) {
+          console.error('❌ Erro no envio:', result.error);
           throw new Error(result.error || `Erro ao enviar planejamento de ${mesNome}/${periodo.ano}`);
         }
+
+        console.log(`✅ ${mesNome}/${periodo.ano} enviado com sucesso!`);
       }
 
       setIsUploading(false);
       setSubmitStatus('success');
+      console.log('🎉 Todos os períodos enviados com sucesso!');
 
     } catch (error) {
       setIsUploading(false);
       setSubmitStatus('error');
-      setSubmitError(error instanceof Error ? error.message : 'Erro ao enviar formulário');
-      console.error('Submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar formulário';
+      setSubmitError(errorMessage);
+      console.error('💥 Erro geral:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
     } finally {
       setIsSubmitting(false);
+      console.log('=== FIM DO ENVIO ===\n');
     }
   };
 
