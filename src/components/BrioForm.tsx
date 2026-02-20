@@ -11,7 +11,7 @@ import { ArrowRight, ArrowLeft, Upload, BookOpen, Calculator, PenTool, Scroll, G
 // File upload hook
 export function useFileUpload() {
   return async (filename: string, file: File) => {
-    const res = await fetch('https://brio-site.vercel.app/api/storage/upload', {
+    const res = await fetch('https://www.brioeducacional.com.br/api/storage/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename }),
