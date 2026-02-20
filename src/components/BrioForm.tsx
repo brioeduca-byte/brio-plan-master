@@ -40,7 +40,7 @@ interface SlackApiResponse {
   error?: string;
 }
 
-const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "https://brio-site.vercel.app/api/slack/send-message"
+const SLACK_FEEDBACK_ENDPOINT = import.meta.env.VITE_SLACK_FEEDBACK_ENDPOINT || "https://www.brioeducacional.com.br/api/slack/send-message"
 const GCS_BUCKET_NAME = import.meta.env.VITE_GCS_BUCKET_NAME || "midia.brioeduca.com"
 
 const sendFormToSlack = async (
