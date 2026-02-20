@@ -604,7 +604,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8">
                   <p className="text-lg text-center text-muted-foreground leading-relaxed text-neutral-900">
-                    📌 <b>Durante este piloto, você selecionará os meses em questão (por exemplo: Setembro e Outubro).</b>
+                    📌 <b>Você selecionará os meses em questão (por exemplo: Setembro e Outubro).</b>
                     <br />
                     <br />
                     Para cada mês, basta preencher os conteúdos previstos para as 4 semanas.
@@ -1053,7 +1053,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                   </h1>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-4 text-neutral-900">
                     Muito obrigado(a) por compartilhar seu planejamento.
-                    Este é um passo essencial para construirmos juntos um piloto de sucesso, no qual:
+                    Este é um passo essencial para construirmos juntos uma implementação de sucesso, no qual:
                   </p>
                   <ul className="list-disc list-inside text-muted-foreground text-center mb-4 px-4 space-y-2 text-neutral-800">
                     <li>Os alunos terão clareza e autonomia sobre seus estudos;</li>
