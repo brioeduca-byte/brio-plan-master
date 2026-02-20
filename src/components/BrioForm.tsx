@@ -222,15 +222,17 @@ const BrioForm: React.FC = () => {
       case 'selecao-periodos':
         return periodosEscolhidos.length > 0;
       case 'planejamento':
-        // Check if all months have required content filled
+        // Check if all months have required content filled (use fallback if plan not yet initialized)
         return periodosEscolhidos.every(periodo => {
           const key = `${periodo.mes}-${periodo.ano}`;
           const plano = planosMes[key];
-          return plano &&
+          if (!plano) return false;
+          return (
             plano.semana1.conteudos.trim() !== '' &&
             plano.semana2.conteudos.trim() !== '' &&
             plano.semana3.conteudos.trim() !== '' &&
-            plano.semana4.conteudos.trim() !== '';
+            plano.semana4.conteudos.trim() !== ''
+          );
         });
       default:
         return true;
@@ -515,14 +517,15 @@ const BrioForm: React.FC = () => {
     });
   };
 
-  // Initialize month plans when periods change
+  // Initialize month plans when periods change (exclude planosMes from deps to avoid infinite loop)
   React.useEffect(() => {
-    periodosEscolhidos.forEach(periodo => {
-      const key = `${periodo.mes}-${periodo.ano}`;
-      if (!planosMes[key]) {
-        setPlanosMes(prev => ({
-          ...prev,
-          [key]: {
+    setPlanosMes(prev => {
+      const updated = { ...prev };
+      let changed = false;
+      periodosEscolhidos.forEach(periodo => {
+        const key = `${periodo.mes}-${periodo.ano}`;
+        if (!updated[key]) {
+          updated[key] = {
             mes: periodo.mes,
             ano: periodo.ano,
             semana1: { conteudos: '', obs: '' },
@@ -530,11 +533,13 @@ const BrioForm: React.FC = () => {
             semana3: { conteudos: '', obs: '' },
             semana4: { conteudos: '', obs: '' },
             observacoes_gerais: ''
-          }
-        }));
-      }
+          };
+          changed = true;
+        }
+      });
+      return changed ? updated : prev;
     });
-  }, [periodosEscolhidos, planosMes]);
+  }, [periodosEscolhidos]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -928,7 +933,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
                               <div>
                                 <Label className="text-base font-medium text-foreground mb-2 block text-neutral-900">
-                                  Quais conteúdos você pretende trabalhar nesta semana? *
+                                  Semana {weekNumber} – Quais conteúdos você pretende trabalhar nesta semana? *
                                 </Label>
                                 <Textarea
                                   placeholder="Descreva os conteúdos que serão abordados..."
