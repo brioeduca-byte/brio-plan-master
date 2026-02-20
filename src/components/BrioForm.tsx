@@ -55,6 +55,8 @@ const sendFormToSlack = async (
     const message =
       `🎯 # Formulário de Planejamento de Conteúdo!\n\n` +
       `👤 **Nome:** ${formData.nome}\n\n` +
+      `🗓️ **Ano Letivo:** ${formData.anoLetivo}\n\n` +
+      `🎓 **Ano Escolar:** ${formData.anoEscolar}\n\n` +
       `📚 **Disciplina:** ${disciplina}\n\n` +
       `📅 **Semana 1:**\n` +
       `   • Conteúdos: ${formData.semana1.conteudos}\n` +
@@ -137,6 +139,8 @@ interface MonthPlan {
 
 interface BrioFormData {
   nome: string;
+  anoLetivo: string;
+  anoEscolar: string;
   disciplina: Discipline | '';
   semana1: WeekData;
   semana2: WeekData;
@@ -167,6 +171,8 @@ const BrioForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>('inicio');
   const [formData, setFormData] = useState<BrioFormData>({
     nome: '',
+    anoLetivo: new Date().getFullYear().toString(),
+    anoEscolar: '',
     disciplina: '',
     semana1: { conteudos: '', obs: '' },
     semana2: { conteudos: '', obs: '' },
@@ -216,7 +222,7 @@ const BrioForm: React.FC = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 'nome':
-        return formData.nome.trim() !== '';
+        return formData.nome.trim() !== '' && formData.anoLetivo !== '' && formData.anoEscolar !== '';
       case 'disciplina':
         return formData.disciplina !== '';
       case 'selecao-periodos':
@@ -305,6 +311,8 @@ const BrioForm: React.FC = () => {
 
         const formDataWithPeriod: BrioFormData = {
           nome: formData.nome,
+          anoLetivo: formData.anoLetivo,
+          anoEscolar: formData.anoEscolar,
           disciplina: formData.disciplina,
           semana1: {
             ...planoMes.semana1,
@@ -646,10 +654,10 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               </div>
 
               <Card className="glass animate-fade-in">
-                <CardContent className="p-8">
+                <CardContent className="p-8 space-y-6">
                   <div>
                     <Label htmlFor="nome" className="text-lg font-medium text-foreground mb-3 block text-neutral-900">
-                      Nome completo*
+                      Nome completo *
                     </Label>
                     <Input
                       id="nome"
@@ -660,6 +668,43 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                       className="text-base h-12"
                       required
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="anoLetivo" className="text-lg font-medium text-foreground mb-3 block text-neutral-900">
+                        Ano letivo *
+                      </Label>
+                      <select
+                        id="anoLetivo"
+                        value={formData.anoLetivo}
+                        onChange={(e) => updateFormData({ anoLetivo: e.target.value })}
+                        className="w-full p-3 h-12 border border-gray-200 rounded-md bg-white text-neutral-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione o ano...</option>
+                        {[2024, 2025, 2026].map(year => (
+                          <option key={year} value={year.toString()}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="anoEscolar" className="text-lg font-medium text-foreground mb-3 block text-neutral-900">
+                        Ano escolar *
+                      </Label>
+                      <select
+                        id="anoEscolar"
+                        value={formData.anoEscolar}
+                        onChange={(e) => updateFormData({ anoEscolar: e.target.value })}
+                        className="w-full p-3 h-12 border border-gray-200 rounded-md bg-white text-neutral-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione o ano escolar...</option>
+                        <option value="6º ano">6º ano</option>
+                        <option value="7º ano">7º ano</option>
+                        <option value="8º ano">8º ano</option>
+                        <option value="9º ano">9º ano</option>
+                      </select>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1132,6 +1177,8 @@ Nossa equipe recebeu o planejamento e vai utilizá-lo para preparar os cronogram
                       setCurrentStep('inicio');
                       setFormData({
                         nome: '',
+                        anoLetivo: new Date().getFullYear().toString(),
+                        anoEscolar: '',
                         disciplina: '',
                         semana1: { conteudos: '', obs: '' },
                         semana2: { conteudos: '', obs: '' },
