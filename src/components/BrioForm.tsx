@@ -55,9 +55,8 @@ const sendFormToSlack = async (
     const message =
       `🎯 # Formulário de Planejamento de Conteúdo!\n\n` +
       `👤 **Nome:** ${formData.nome}\n\n` +
-      `🗓️ **Ano Letivo:** ${formData.anoLetivo}\n\n` +
-      `🎓 **Ano Escolar:** ${formData.anoEscolar}\n\n` +
       `📚 **Disciplina:** ${disciplina}\n\n` +
+      `🎓 **Ano letivo:** ${formData.anoLetivo ? `${formData.anoLetivo}º ano` : 'Não informado'}\n\n` +
       `📅 **Semana 1:**\n` +
       `   • Conteúdos: ${formData.semana1.conteudos}\n` +
       `   • Observações: ${formData.semana1.obs || 'Nenhuma'}\n` +
@@ -137,11 +136,12 @@ interface MonthPlan {
   observacoes_gerais: string;
 }
 
+type AnoLetivo = 6 | 7 | 8 | 9;
+
 interface BrioFormData {
   nome: string;
-  anoLetivo: string;
-  anoEscolar: string;
   disciplina: Discipline | '';
+  anoLetivo: AnoLetivo | '';
   semana1: WeekData;
   semana2: WeekData;
   semana3: WeekData;
@@ -167,13 +167,19 @@ const MONTHS = [
 
 const YEARS = [2024, 2025, 2026].map(year => year.toString());
 
+const ANOS_LETIVOS: { value: AnoLetivo; label: string }[] = [
+  { value: 6, label: '6º ano' },
+  { value: 7, label: '7º ano' },
+  { value: 8, label: '8º ano' },
+  { value: 9, label: '9º ano' },
+];
+
 const BrioForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>('inicio');
   const [formData, setFormData] = useState<BrioFormData>({
     nome: '',
-    anoLetivo: new Date().getFullYear().toString(),
-    anoEscolar: '',
     disciplina: '',
+    anoLetivo: '',
     semana1: { conteudos: '', obs: '' },
     semana2: { conteudos: '', obs: '' },
     semana3: { conteudos: '', obs: '' },
@@ -222,11 +228,11 @@ const BrioForm: React.FC = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 'nome':
-        return formData.nome.trim() !== '' && formData.anoLetivo !== '' && formData.anoEscolar !== '';
+        return formData.nome.trim() !== '';
       case 'disciplina':
         return formData.disciplina !== '';
       case 'selecao-periodos':
-        return periodosEscolhidos.length > 0;
+        return periodosEscolhidos.length > 0 && formData.anoLetivo !== '';
       case 'planejamento':
         // Check if all months have required content filled (use fallback if plan not yet initialized)
         return periodosEscolhidos.every(periodo => {
@@ -311,9 +317,8 @@ const BrioForm: React.FC = () => {
 
         const formDataWithPeriod: BrioFormData = {
           nome: formData.nome,
-          anoLetivo: formData.anoLetivo,
-          anoEscolar: formData.anoEscolar,
           disciplina: formData.disciplina,
+          anoLetivo: formData.anoLetivo,
           semana1: {
             ...planoMes.semana1,
             obs: planoMes.semana1.obs ? `${periodoTag} ${planoMes.semana1.obs}` : planoMes.semana1.obs
@@ -612,7 +617,7 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8">
                   <p className="text-lg text-center text-muted-foreground leading-relaxed text-neutral-900">
-                    📌 <b>Você selecionará os meses em questão (por exemplo: Setembro e Outubro).</b>
+                    📌 <b>Você selecionará os meses em questão (por exemplo: Fevereiro e Março).</b>
                     <br />
                     <br />
                     Para cada mês, basta preencher os conteúdos previstos para as 4 semanas.
@@ -668,43 +673,6 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                       className="text-base h-12"
                       required
                     />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="anoLetivo" className="text-lg font-medium text-foreground mb-3 block text-neutral-900">
-                        Ano letivo *
-                      </Label>
-                      <select
-                        id="anoLetivo"
-                        value={formData.anoLetivo}
-                        onChange={(e) => updateFormData({ anoLetivo: e.target.value })}
-                        className="w-full p-3 h-12 border border-gray-200 rounded-md bg-white text-neutral-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Selecione o ano...</option>
-                        {[2024, 2025, 2026].map(year => (
-                          <option key={year} value={year.toString()}>{year}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="anoEscolar" className="text-lg font-medium text-foreground mb-3 block text-neutral-900">
-                        Ano escolar *
-                      </Label>
-                      <select
-                        id="anoEscolar"
-                        value={formData.anoEscolar}
-                        onChange={(e) => updateFormData({ anoEscolar: e.target.value })}
-                        className="w-full p-3 h-12 border border-gray-200 rounded-md bg-white text-neutral-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Selecione o ano escolar...</option>
-                        <option value="6º ano">6º ano</option>
-                        <option value="7º ano">7º ano</option>
-                        <option value="8º ano">8º ano</option>
-                        <option value="9º ano">9º ano</option>
-                      </select>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -804,6 +772,31 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
 
               <Card className="glass animate-fade-in">
                 <CardContent className="p-8 space-y-6">
+                  <div>
+                    <Label className="text-lg font-medium text-foreground mb-4 block text-neutral-900">
+                      Qual ano letivo? *
+                    </Label>
+                    <RadioGroup
+                      value={formData.anoLetivo ? String(formData.anoLetivo) : ''}
+                      onValueChange={(value) => updateFormData({ anoLetivo: value ? (Number(value) as AnoLetivo) : '' })}
+                      className="flex flex-wrap gap-4"
+                    >
+                      {ANOS_LETIVOS.map((item) => (
+                        <Label
+                          key={item.value}
+                          className={`flex items-center space-x-3 cursor-pointer p-4 rounded-xl border-2 transition-all ${
+                            formData.anoLetivo === item.value
+                              ? 'border-accent bg-accent/10'
+                              : 'border-border hover:border-accent/50'
+                          }`}
+                        >
+                          <RadioGroupItem value={String(item.value)} className="sr-only" />
+                          <span className="text-foreground text-neutral-900">{item.label}</span>
+                        </Label>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
                   <div>
                     <Label className="text-lg font-medium text-foreground mb-4 block text-neutral-900">
                       Quantos meses deseja planejar agora? *
@@ -942,6 +935,13 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                 </p>
               </div>
 
+              <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-300 text-sm">
+                <p className="font-semibold mb-1 text-amber-900">Importante:</p>
+                <p className="text-amber-950 leading-relaxed">
+                  A numeração das semanas considera a sequência de semanas a partir do momento do preenchimento deste formulário, e não as semanas do calendário.
+                </p>
+              </div>
+
               <div className="space-y-6">
                 {periodosEscolhidos.map((periodo) => {
                   const key = `${periodo.mes}-${periodo.ano}`;
@@ -967,13 +967,14 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                         {/* 4 semanas */}
                         {(['semana1', 'semana2', 'semana3', 'semana4'] as const).map((semana) => {
                           const weekNumber = semana.replace('semana', '');
+                          const weekLabel = weekNumber === '1' ? 'Semana 1 (semana atual)' : `Semana ${weekNumber}`;
                           const weekData = plano[semana];
                           const uploadKey = `${key}_${semana}`;
 
                           return (
                             <div key={semana} className="border border-gray-200 rounded-lg p-6 space-y-4">
                               <h4 className="text-lg font-medium text-foreground text-neutral-900">
-                                Semana {weekNumber}
+                                {weekLabel}
                               </h4>
 
                               <div>
@@ -1097,14 +1098,13 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                     Planejamento recebido!
                   </h1>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-4 text-neutral-900">
-                    Muito obrigado(a) por compartilhar seu planejamento.
-                    Este é um passo essencial para construirmos juntos uma implementação de sucesso, no qual:
+                    Obrigado(a) por compartilhar seu planejamento.
+                    Nossa equipe já recebeu as informações e irá utilizá-las para preparar os cronogramas dos alunos.
                   </p>
-                  <ul className="list-disc list-inside text-muted-foreground text-center mb-4 px-4 space-y-2 text-neutral-800">
-                    <li>Os alunos terão clareza e autonomia sobre seus estudos;</li>
-                    <li>Os professores contarão com uma ferramenta que reduz sobrecarga e valoriza seu tempo;</li>
-                    <li>A escola terá indicadores claros de engajamento e aprendizagem.</li>
-                  </ul>
+                  <p className="text-muted-foreground leading-relaxed text-neutral-800">
+                    👉 Precisa enviar o planejamento de outro ano letivo (ex.: 7º, 8º ou 9º ano)?
+                    Basta clicar em Criar novo planejamento e preencher novamente.
+                  </p>
                 </div>
               </CardHeader>
               <CardContent className="text-center space-y-4">
@@ -1135,16 +1135,10 @@ Este é apenas o primeiro passo de uma jornada que une tecnologia e pedagogia pa
                 )}
 
                 {submitStatus === 'success' && (
-                  <div className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-8 h-8 text-white" />
-                    </div>
+                  <div className="text-center">
                     <h3 className="text-xl font-semibold text-green-600">
                       Planejamento enviado com sucesso!
                     </h3>
-                    <p className="text-muted-foreground">
-Nossa equipe recebeu o planejamento e vai utilizá-lo para preparar os cronogramas personalizados dos alunos.
-                    </p>
                   </div>
                 )}
 
@@ -1177,9 +1171,8 @@ Nossa equipe recebeu o planejamento e vai utilizá-lo para preparar os cronogram
                       setCurrentStep('inicio');
                       setFormData({
                         nome: '',
-                        anoLetivo: new Date().getFullYear().toString(),
-                        anoEscolar: '',
                         disciplina: '',
+                        anoLetivo: '',
                         semana1: { conteudos: '', obs: '' },
                         semana2: { conteudos: '', obs: '' },
                         semana3: { conteudos: '', obs: '' },
